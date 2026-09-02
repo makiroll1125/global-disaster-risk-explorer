@@ -103,6 +103,10 @@ The principal user tasks will therefore include comparison, filtering, trend ide
 
 ![alt text](image.png)
 
+![alt text](image-3.png)
+
+![alt text](image-4.png)
+
 | Proposed visualization | Technique | Purpose |
 |------------------------|-----------|---------|
 | Global disaster map | Choropleth map | Shows which countries experience the highest concentration of selected disaster events or impacts. |
