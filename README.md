@@ -1,157 +1,69 @@
-# Project Proposal: Global Disaster Risk Explorer
+﻿# Global Disaster Risk Explorer
 
-## 1. Topic, Goals, and Questions
+An interactive D3.js prototype for exploring the occurrence and reported impacts of natural disasters. Built for the data visualization class project by Tobias Garcia and Ha Nguyen.
 
-### Topic
+## Run locally
 
-Our project, **Global Disaster Risk Explorer**, will be an interactive web visualization that explores the occurrence and impacts of natural disasters around the world. We want to investigate how different types of disasters affect different countries in terms of human casualties, affected populations, and economic damage.
+From this folder:
 
-Natural disasters provide a particularly interesting visualization challenge due to the several dimensions of data that are difficult to understand simultaneously. A single disaster can be described by its location, time, type, magnitude, number of deaths, number of people affected, and economic damage. These characteristics also vary between countries and disaster types. By combining these dimensions in an interactive visualization, users can explore patterns that would be otherwise difficult to identify from tables or static graphs.
+```powershell
+python -m http.server 8000 --bind 127.0.0.1
+```
 
-Our project will use the [**EM-DAT Emergency Events Database**](https://doc.emdat.be/docs/), maintained by the Centre for Research on the Epidemiology of Disasters (CRED) at UCLouvain. EM-DAT currently contains more than 27,000 disaster records and covers a wide range of natural hazards, including floods, storms, earthquakes, droughts, wildfires, volcanic activity, landslides, and extreme temperatures.
+Open **http://127.0.0.1:8000**. Stop the server with Ctrl+C. A local HTTP server is needed to load the data; opening `index.html` directly will not work. No npm installation or build step is required, and all runtime libraries and data are bundled locally.
 
-### Visualization Goals
+## Explore
 
-Our primary goal is to create an interactive **global disaster risk explorer** that allows users to:
+- Compare country totals on the interactive world map; zoom, pan, or select a country.
+- Switch between records, reported deaths, affected populations and adjusted damage.
+- Filter by any of the 14 natural-hazard types, region or country/territory.
+- Compare country or hazard rankings and select a bar to filter linked views.
+- Drag the timeline brush handles or use year selectors to change the period.
+- Inspect reporting coverage, individual records, and download the filtered CSV.
 
-- identify where and when different natural disasters occur,
-- compare disaster types by frequency and severity,
-- investigate differences in deaths, affected populations, and economic damage,
-- identify countries or regions that experience unusually high disaster impacts, and
-- explore how disaster patterns and impacts have changed over time.
+The default scope is **2000–2026, all natural hazards**. **2026 is partial.** Adjusted damage uses **2025 USD**. Unknown impacts remain null; recorded totals are not estimates of future risk.
 
-Users should be able to select a disaster type, time period, country, or impact measure and see the other views update accordingly.
+![Working desktop prototype](docs/prototype-desktop.png)
 
-### Intended Audience
+## Data and reproduction
 
-The primary audience is the general public and university students who are interested in natural hazards but may not have specialized knowledge of disaster science. The interface will therefore prioritize intuitive maps, clearly labeled charts, interactive filtering, and concise explanations of the measures being displayed.
+The original EM-DAT export supplied by the project owner is preserved in `data/raw/`. It has 10,896 country-disaster records, 9,001 distinct event identifiers, 220 countries/territories, and 14 hazard types.
 
-### Research and Exploration Questions
+```powershell
+python -m pip install -r requirements.txt
+python scripts/prepare_data.py data/raw/public_emdat_custom_request_2026-09-15_8a971085-98e9-420a-9513-c44f4dc5eca4.xlsx --start-year 2000 --end-year 2026 --all-natural
+```
 
-Our visualization will focus on four main questions:
+Outputs include cleaned CSV/JSON, a source checksum and quality report, aggregates by country/type/year, impact distributions, largest-impact records and a generated analysis report. See [data methods](docs/data-methods.md) for the field dictionary and cleaning rules.
 
-1. **Where and how frequently do different types of natural disasters occur around the world?**
-2. **Which disaster types produce the greatest human and economic impacts?**
-3. **Which countries or regions experience the greatest concentration of disaster impacts?**
-4. **How do disaster frequency and disaster impact change across countries and over time?**
+## Interim deliverables
 
-These questions will guide our data analysis and ensure that each visualization contributes to the same overall narrative.
+- [Interim checklist, findings and presentation walkthrough](docs/interim-status.md)
+- [Finalized research questions](docs/research-questions.md)
+- [Initial analysis](docs/initial-analysis.md)
+- [Interface rationale and coordination rules](docs/interface-design.md)
+- [Desktop/mobile wireframe](docs/interface-wireframe.svg)
+- [Mobile prototype screenshot](docs/prototype-mobile.png)
+- [Original project proposal](proposal.md)
+- [Project rubric](project-rubric.md)
 
----
+The interim implements three linked visualization idioms: choropleth, timeline and ranking. The final rubric requires five; proportional symbols and a relationship scatterplot remain planned. Nothing has been committed or published.
 
-## 2. Dataset
+## Verify
 
-### Source and Acquisition
+```powershell
+python -m unittest discover -s tests -p test_data.py
+node --test tests/data.test.js
+```
 
-Our primary dataset will be the [**EM-DAT Public Table**](https://doc.emdat.be/docs/), available through the EM-DAT public data portal:  
-[https://public.emdat.be/](https://public.emdat.be/)
+For browser integration checks, leave the local server running, install Playwright if needed (`python -m pip install -r tests/requirements.txt`), then run:
 
-This public data is a downloadable flat representation of EM-DAT in which each row represents a disaster impact in a particular country. We will download the dataset and use it as the project's primary data source rather than relying on multiple external datasets.
+```powershell
+python tests/browser_check.py
+```
 
-EM-DAT provides free access for non-commercial use, and the current data portal is updated regularly.
+The browser check uses the installed Chrome executable on Windows; adjust its path if running elsewhere. It verifies real-data totals and linked interactions, exports, empty/missing data states, mobile layout and local-only asset loading.
 
-### Size and Attributes
+## Sources
 
-EM-DAT currently contains more than **27,000** disaster records. The public table contains numerous variables describing each event, including:
-
-- disaster type and subtype,
-- country, region, and ISO country code,
-- start and end dates,
-- disaster magnitude and magnitude scale,
-- total deaths,
-- number injured,
-- number affected,
-- number homeless,
-- total affected population, and
-- total and inflation-adjusted economic damage.
-
-These variables will provide sufficient dimensions for both geographic and quantitative visualization.
-
-### Processing
-
-Our preprocessing will be performed primarily with Python and pandas. We will remove irrelevant fields, standardize dates and categorical values, handle missing values, and restrict the dataset to natural hazards relevant to the project throuch data cleaning and transformation. We will derive additional variables such as disaster year and total human impact.
-
-We will make sure to pay particular attention to any given missing values because an empty EM-DAT field may indicate either that an impact was absent or that the impact was unknown or unreported. We will therefore avoid automatically interpreting missing impact values as zero.
-
-Additionally, we will ensure to document EM-DAT's limitations. The database primarily records major disasters meeting criteria such as at least 10 fatalities, at least 100 affected people, a declaration of emergency, or a request for international assistance. Consequently, our analysis will only represent recorded major disasters, not every natural hazard event.
-
----
-
-## 3. Analysis and Visualization Methods
-
-Our implementation will use HTML, CSS, JavaScript, and D3.js, with Python/pandas used for data cleaning, aggregation, and analysis.
-
-We plan to develop at least five coordinated visualization idioms:
-
-1. **Interactive world choropleth map**: compare countries by disaster frequency or impact.
-2. **Proportional-symbol map**: display the magnitude of disaster impacts at geographic locations or countries.
-3. **Interactive time-series chart**: identify changes in disaster frequency and impacts over time.
-4. **Ranked bar chart**: compare countries or disaster types according to deaths, affected people, or economic damage.
-5. **Scatterplot**: investigate relationships between disaster frequency, affected population, deaths, and economic damage.
-
-Instead of treating these as independent charts, however, they will form a linked-view interface. Selecting a disaster type or country will update the other visualizations. Users will be able to filter by year, disaster type, region, and impact measure.
-
-The principal user tasks will therefore include comparison, filtering, trend identification, geographic exploration, relationship discovery, and perhaps outlier detection.
-
----
-
-## 4. Visualization Sketches or References
-
-![alt text](image-2.png)
-
-![alt text](image-1.png)
-
-![alt text](image.png)
-
-| Proposed visualization | Technique | Purpose |
-|------------------------|-----------|---------|
-| Global disaster map | Choropleth map | Shows which countries experience the highest concentration of selected disaster events or impacts. |
-| Disaster impact map | Proportional symbols | Allows users to compare the geographic scale of individual or aggregated disaster impacts. |
-| Historical timeline | Line chart | Reveals how disaster frequency and impacts change over time. |
-| Country/disaster ranking | Horizontal bar chart | Supports direct comparison of the most affected countries or most impactful disaster types. |
-| Impact relationship | Scatterplot | Helps users investigate relationships between human and economic consequences. |
-
-These designs may be revised after initial data analysis reveals the actual distributions and limitations of the data.
-
----
-
-## 5. Group Roles and Responsibilities
-
-As a two-person group, both of us will participate in all major stages while taking primary responsibility for different areas.
-
-**Tobias Garcia** will lead data acquisition, cleaning, initial analysis, geographic data preparation, and D3 implementation of the interactive map and time-series visualizations.
-
-**Ha Nguyen** will lead visualization and interface design, interaction design, comparative and statistical visualizations, and front-end development.
-
-We will both contribute to data analysis, testing, debugging, documentation, presentation preparation, and final integration. Additionally, each member will review and understand the complete implementation throughout the process rather than working on isolated components.
-
----
-
-## 6. Interim Presentation Deliverables
-
-By the interim presentation, we expect to have:
-
-- downloaded and inspected the EM-DAT dataset,
-- completed initial data cleaning and transformation,
-- performed initial analysis of disaster types, countries, years, deaths, affected populations, and economic damage,
-- finalized the primary research questions,
-- produced initial sketches or mockups for the interface,
-- implemented a preliminary D3.js world map, and
-- implemented at least one additional interactive visualization, such as a time-series chart.
-
-During the interim presentation, we will demonstrate a working prototype using a subset or initial version of the processed data and explain how our visualization design evolved from initial analysis.
-
----
-
-## 7. Timeline and Milestones
-
-| Week | Milestone | Tasks | Member(s) | Expected Output |
-|------|-----------|-------|-----------------------|-----------------|
-| **Week 2** | Project Definition | Finalize topic, research questions, visualization goals, and EM-DAT scope. Research existing reference visualizations. | Both | Final project concept and initial sketches |
-| **Week 3** | Data Preparation | Download EM-DAT, inspect variables, clean missing values, standardize dates/categories, prepare geographic data. | Tobias Garcia | Cleaned and documented dataset |
-| **Week 4** | Visualization Design | Perform initial analysis; test map, timeline, ranking, and scatterplot designs; finalize interaction plan. | Both | Refined designs and analytical findings |
-| **Week 5** | Interim Prototype | Implement initial D3 map, timeline, filters, and basic interface. Prepare presentation demonstrating data preparation and prototype. | Tobias Garcia: map/data; Ha Nguyen: interface/charts | Working prototype and interim presentation |
-| **Week 6** | Implementation & Refinement | Complete remaining visualizations, linked interactions, tooltips, filtering, responsive interface, and visual refinement. | Both | Near-complete interactive visualization |
-| **Week 7** | Final Integration | Conduct testing, fix interaction and data issues, verify analytical results, complete documentation, and prepare final presentation. | Both | Final visualization, documentation, and presentation |
-
-Overall, the project will progress from **data acquisition and exploration → visualization design → prototype development → interactive implementation → testing and final integration**, ensuring that the workload is distributed across the full project period.
+Disaster data: [EM-DAT, CRED / UCLouvain](https://public.emdat.be/), export dated 15 September 2026. Definitions: [EM-DAT documentation](https://doc.emdat.be/docs/). Geography: Natural Earth via [World Atlas 2.0.2](https://github.com/topojson/world-atlas). Local libraries and licenses: [vendor notes](vendor/README.md).

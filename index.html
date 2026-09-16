@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#086b70">
+  <title>Global Disaster Risk Explorer</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="vendor/d3.v7.min.js"></script>
+  <script defer src="vendor/topojson-client.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#explore">Skip to explorer</a>
+  <header class="masthead">
+    <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">◎</span> EARTH / IMPACT</a>
+    <nav aria-label="Main navigation"><a class="active" href="#explore">Explorer</a><a href="#about">About the data <span aria-hidden="true">↗</span></a></nav>
+    <span class="prototype">INTERIM PROTOTYPE</span>
+  </header>
+  <main id="explore">
+    <section class="intro">
+      <div><p class="eyebrow">GLOBAL DISASTER RISK EXPLORER · 2000–2026</p>
+        <h1>A world of hazards.<br><span>Unequal impacts.</span></h1>
+        <p class="intro-copy">Explore where major natural disasters are recorded, how their impacts differ, and how the picture changes over time.</p></div>
+      <aside class="intro-note"><span class="small-dot"></span><strong>Start with a place. Follow a pattern.</strong><p>Select a country on the map, compare an impact measure, then narrow the years below.</p><span class="source-tag">EM-DAT / CRED · UCLouvain</span></aside>
+    </section>
+
+    <section class="filter-bar" aria-label="Explorer filters">
+      <label>IMPACT MEASURE<select id="metric"><option value="records">Disaster records</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label>
+      <label>DISASTER TYPE<select id="type"><option value="">All natural hazards</option></select></label>
+      <label>REGION<select id="region"><option value="">All regions</option></select></label>
+      <label>COUNTRY / TERRITORY<select id="country"><option value="">All countries & territories</option></select></label>
+      <button class="reset" id="reset">Reset filters <span aria-hidden="true">↺</span></button>
+    </section>
+
+    <div class="context-line"><p id="scope" aria-live="polite">Loading local EM-DAT data…</p><span class="partial">2026 is a partial year</span></div>
+    <div id="error" class="error" role="alert" hidden></div>
+    <section id="stats" class="stats" aria-label="Summary of filtered records"></section>
+
+    <div class="main-grid">
+      <section class="panel map-panel" aria-labelledby="map-title">
+        <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear country ×</button></div>
+        <p class="panel-subtitle" id="map-subtitle">Country totals · select a country to explore its history</p>
+        <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="Interactive world map of reported disasters"></svg><div class="map-controls"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom">⤢</button></div></div>
+        <div class="map-footer"><div id="legend"></div><span class="map-hint">Scroll to zoom · drag to pan</span></div>
+        <p class="footnote" id="map-coverage"></p>
+      </section>
+      <section class="panel ranking-panel" aria-labelledby="rank-title">
+        <div class="panel-heading"><div><p class="eyebrow">02 / COMPARE IMPACTS</p><h2 id="rank-title">The global picture</h2></div></div>
+        <div class="segmented" role="group" aria-label="Rank by"><button id="rank-country" aria-pressed="true">Countries</button><button id="rank-type" aria-pressed="false">Disaster types</button></div>
+        <p id="ranking-note" class="panel-subtitle"></p>
+        <svg id="ranking" viewBox="0 0 430 410" role="img" aria-label="Interactive ranking"></svg>
+        <p class="footnote">Select a bar to filter the linked views. Values show reported totals.</p>
+      </section>
+    </div>
+
+    <section class="panel timeline-panel" aria-labelledby="timeline-title">
+      <div class="panel-heading"><div><p class="eyebrow">03 / FOLLOW THE TIMELINE</p><h2 id="timeline-title">How does the picture change over time?</h2></div>
+        <div class="year-controls"><label>From<select id="start-year" aria-label="Start year"></select></label><span>—</span><label>To<select id="end-year" aria-label="End year"></select></label><button id="all-years" class="text-button">All years</button></div></div>
+      <p id="timeline-note" class="panel-subtitle"></p>
+      <svg id="timeline" viewBox="0 0 1300 260" role="img" aria-label="Annual time series"></svg>
+      <div class="brush-label"><span>DRAG THE HANDLES TO SELECT A PERIOD</span><strong id="year-range"></strong></div>
+      <svg id="brush" viewBox="0 0 1300 70" aria-label="Drag to filter years; the From and To controls provide keyboard access"></svg>
+      <p class="footnote">The timeline keeps all years in view for context. Shading marks your selected period. Gaps indicate records with no reported values; 2026 is incomplete.</p>
+    </section>
+
+    <section class="reading-grid" id="about">
+      <div class="reading-card"><p class="eyebrow">READ THE PATTERN</p><h2 id="insight-title">Frequency is only one part of the story.</h2><p id="insight-text">Switch between records, deaths, affected populations and damage to compare different dimensions of disaster impacts.</p></div>
+      <details class="reading-card" open><summary>What these numbers mean</summary><p>A record is one disaster’s impact in one country. A disaster crossing borders appears more than once. Affected totals can include the same people across multiple disasters.</p><p>Blank impacts remain unknown, absent or unreported—not automatically zero. Coverage shows the share of records with a value. Damage is inflation-adjusted to <strong>2025 US dollars</strong>; 2026 adjusted figures are unavailable.</p><p>This is a history of reported major disasters, not a forecast of risk or a comparison adjusted for population. Reporting differences affect comparisons and trends.</p></details>
+    </section>
+    <details class="record-details"><summary>Inspect the filtered records <span id="record-count"></span></summary><p>First 100 matching records, ordered by start year and identifier. Download the full filtered selection for further analysis.</p><button id="download" class="text-button">Download filtered CSV ↓</button><div class="table-scroll"><table><thead><tr><th>Record</th><th>Year</th><th>Country</th><th>Disaster type</th><th>Deaths</th><th>Affected</th><th>Adjusted US$</th></tr></thead><tbody id="record-body"></tbody></table></div></details>
+  </main>
+  <footer><span>EARTH / IMPACT <span class="footer-divider">/</span> Global Disaster Risk Explorer</span><span>Source: <a href="https://public.emdat.be/">EM-DAT</a> · CRED / UCLouvain · Export 15 Sep 2026<br>Boundaries: Natural Earth / World Atlas · <a href="docs/data-methods.md">Data methods</a></span></footer>
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+</body>
+</html>

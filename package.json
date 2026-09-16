@@ -1,0 +1,6 @@
+{
+  "name": "global-disaster-risk-explorer",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test tests/data.test.js", "start": "python -m http.server 8000 --bind 127.0.0.1" }
+}
