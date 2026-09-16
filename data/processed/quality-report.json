@@ -1,0 +1,339 @@
+{
+  "source_rows": 10896,
+  "source_columns": [
+    "DisNo.",
+    "Historic",
+    "Classification Key",
+    "Disaster Group",
+    "Disaster Subgroup",
+    "Disaster Type",
+    "Disaster Subtype",
+    "External IDs",
+    "Event Name",
+    "ISO",
+    "Country",
+    "Subregion",
+    "Region",
+    "Location",
+    "Origin",
+    "Associated Types",
+    "OFDA/BHA Response",
+    "Appeal",
+    "Declaration",
+    "AID Contribution ('000 US$)",
+    "Magnitude",
+    "Magnitude Scale",
+    "Latitude",
+    "Longitude",
+    "River Basin",
+    "Start Year",
+    "Start Month",
+    "Start Day",
+    "End Year",
+    "End Month",
+    "End Day",
+    "Total Deaths",
+    "No. Injured",
+    "No. Affected",
+    "No. Homeless",
+    "Total Affected",
+    "Reconstruction Costs ('000 US$)",
+    "Reconstruction Costs, Adjusted ('000 US$)",
+    "Insured Damage ('000 US$)",
+    "Insured Damage, Adjusted ('000 US$)",
+    "Total Damage ('000 US$)",
+    "Total Damage, Adjusted ('000 US$)",
+    "CPI",
+    "Admin Units",
+    "GADM Admin Units",
+    "Entry Date",
+    "Last Update"
+  ],
+  "exact_duplicates_removed": 0,
+  "invalid_start_year_rows": 0,
+  "excluded_rows": 0,
+  "invalid_numeric_values": {
+    "Total Deaths": 0,
+    "Total Affected": 0,
+    "Total Damage ('000 US$)": 0,
+    "Total Damage, Adjusted ('000 US$)": 0
+  },
+  "unmapped_countries": [
+    {
+      "iso": "GUM",
+      "country": "Guam"
+    },
+    {
+      "iso": "MNP",
+      "country": "Northern Mariana Islands"
+    },
+    {
+      "iso": "FSM",
+      "country": "Micronesia (Federated States of)"
+    },
+    {
+      "iso": "LIE",
+      "country": "Liechtenstein"
+    },
+    {
+      "iso": "CYM",
+      "country": "Cayman Islands"
+    },
+    {
+      "iso": "LCA",
+      "country": "Saint Lucia"
+    },
+    {
+      "iso": "MTQ",
+      "country": "Martinique"
+    },
+    {
+      "iso": "BRB",
+      "country": "Barbados"
+    },
+    {
+      "iso": "GRD",
+      "country": "Grenada"
+    },
+    {
+      "iso": "GLP",
+      "country": "Guadeloupe"
+    },
+    {
+      "iso": "VCT",
+      "country": "Saint Vincent and the Grenadines"
+    },
+    {
+      "iso": "DMA",
+      "country": "Dominica"
+    },
+    {
+      "iso": "COK",
+      "country": "Cook Islands"
+    },
+    {
+      "iso": "TON",
+      "country": "Tonga"
+    },
+    {
+      "iso": "MLT",
+      "country": "Malta"
+    },
+    {
+      "iso": "SPI",
+      "country": "Canary Islands"
+    },
+    {
+      "iso": "HKG",
+      "country": "China, Hong Kong Special Administrative Region"
+    },
+    {
+      "iso": "COM",
+      "country": "Comoros"
+    },
+    {
+      "iso": "SYC",
+      "country": "Seychelles"
+    },
+    {
+      "iso": "CPV",
+      "country": "Cabo Verde"
+    },
+    {
+      "iso": "MDV",
+      "country": "Maldives"
+    },
+    {
+      "iso": "STP",
+      "country": "Sao Tome and Principe"
+    },
+    {
+      "iso": "REU",
+      "country": "Réunion"
+    },
+    {
+      "iso": "MUS",
+      "country": "Mauritius"
+    },
+    {
+      "iso": "VIR",
+      "country": "United States Virgin Islands"
+    },
+    {
+      "iso": "VGB",
+      "country": "British Virgin Islands"
+    },
+    {
+      "iso": "ATG",
+      "country": "Antigua and Barbuda"
+    },
+    {
+      "iso": "MAC",
+      "country": "China, Macao Special Administrative Region"
+    },
+    {
+      "iso": "SGP",
+      "country": "Singapore"
+    },
+    {
+      "iso": "MHL",
+      "country": "Marshall Islands"
+    },
+    {
+      "iso": "WSM",
+      "country": "Samoa"
+    },
+    {
+      "iso": "KIR",
+      "country": "Kiribati"
+    },
+    {
+      "iso": "BMU",
+      "country": "Bermuda"
+    },
+    {
+      "iso": "TKL",
+      "country": "Tokelau"
+    },
+    {
+      "iso": "ASM",
+      "country": "American Samoa"
+    },
+    {
+      "iso": "SCG",
+      "country": "Serbia Montenegro"
+    },
+    {
+      "iso": "TCA",
+      "country": "Turks and Caicos Islands"
+    },
+    {
+      "iso": "SHN",
+      "country": "Saint Helena"
+    },
+    {
+      "iso": "NIU",
+      "country": "Niue"
+    },
+    {
+      "iso": "TUV",
+      "country": "Tuvalu"
+    },
+    {
+      "iso": "PLW",
+      "country": "Palau"
+    },
+    {
+      "iso": "AIA",
+      "country": "Anguilla"
+    },
+    {
+      "iso": "SXM",
+      "country": "Sint Maarten (Dutch part)"
+    },
+    {
+      "iso": "GUF",
+      "country": "French Guiana"
+    },
+    {
+      "iso": "MYT",
+      "country": "Mayotte"
+    },
+    {
+      "iso": "BLM",
+      "country": "Saint Barthélemy"
+    },
+    {
+      "iso": "AZO",
+      "country": "Azores Islands"
+    },
+    {
+      "iso": "MSR",
+      "country": "Montserrat"
+    },
+    {
+      "iso": "KNA",
+      "country": "Saint Kitts and Nevis"
+    },
+    {
+      "iso": "PYF",
+      "country": "French Polynesia"
+    },
+    {
+      "iso": "WLF",
+      "country": "Wallis and Futuna Islands"
+    },
+    {
+      "iso": "MAF",
+      "country": "Saint Martin (French Part)"
+    }
+  ],
+  "unmapped_rows": 279,
+  "cleaned_rows": 10896,
+  "unique_events": 9001,
+  "countries": 220,
+  "scope": {
+    "start_year": 2000,
+    "end_year": 2026,
+    "types": "all natural"
+  },
+  "observed_years": [
+    2000,
+    2026
+  ],
+  "source_missing_impact_counts": {
+    "Total Deaths": 3070,
+    "Total Affected": 2076,
+    "Total Damage ('000 US$)": 7556,
+    "Total Damage, Adjusted ('000 US$)": 7590
+  },
+  "source_type_counts": {
+    "Flood": 4291,
+    "Storm": 2924,
+    "Epidemic": 895,
+    "Earthquake": 707,
+    "Extreme temperature": 606,
+    "Mass movement (wet)": 504,
+    "Drought": 426,
+    "Wildfire": 355,
+    "Volcanic activity": 134,
+    "Infestation": 29,
+    "Mass movement (dry)": 15,
+    "Glacial lake outburst flood": 8,
+    "Impact": 1,
+    "Animal incident": 1
+  },
+  "source_year_counts": {
+    "2000": 505,
+    "2001": 433,
+    "2002": 491,
+    "2003": 390,
+    "2004": 394,
+    "2005": 482,
+    "2006": 458,
+    "2007": 446,
+    "2008": 389,
+    "2009": 388,
+    "2010": 433,
+    "2011": 354,
+    "2012": 372,
+    "2013": 358,
+    "2014": 342,
+    "2015": 397,
+    "2016": 350,
+    "2017": 371,
+    "2018": 337,
+    "2019": 438,
+    "2020": 414,
+    "2021": 437,
+    "2022": 436,
+    "2023": 462,
+    "2024": 447,
+    "2025": 412,
+    "2026": 160
+  },
+  "adjusted_damage_reference_year": 2025,
+  "source_file": "public_emdat_custom_request_2026-09-15_8a971085-98e9-420a-9513-c44f4dc5eca4.xlsx",
+  "source_sha256": "b2cca59112d257d3eae8af732239681efbee1e94aefd57fe2c8824108455fb5d",
+  "source_url": "https://public.emdat.be/"
+}
