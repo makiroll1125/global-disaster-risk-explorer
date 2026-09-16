@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="880" viewBox="0 0 1140 880" role="img" aria-labelledby="title desc">
+<title id="title">Global Disaster Risk Explorer interface wireframe</title><desc id="desc">A desktop layout places filters and summary cards above a map and ranking, followed by a linked timeline. A mobile layout stacks these sections. Annotations explain shared filters and contextual views.</desc>
+<defs><style>text{font-family:Arial,sans-serif;fill:#29454e}.small{font-size:12px;fill:#60757c}.label{font-size:13px;font-weight:bold}.wire{fill:#fff;stroke:#a7bab8;stroke-width:1.2}.soft{fill:#eaf2ef;stroke:#b9cec6}.dash{fill:none;stroke:#9aaeb0;stroke-dasharray:5 4}</style></defs>
+<rect width="1140" height="880" fill="#f5f7f6"/>
+<text x="35" y="40" font-size="23" font-weight="bold">Global Disaster Risk Explorer / interface wireframe</text>
+<text x="35" y="64" class="small">Interim design · light interface · linked overview, comparison and temporal exploration</text>
+<text x="35" y="101" class="label">DESKTOP</text><text x="865" y="101" class="label">MOBILE</text>
+<rect x="35" y="117" width="780" height="685" rx="8" class="wire"/>
+<rect x="55" y="134" width="740" height="32" class="soft"/><text x="68" y="154" class="small">IDENTITY</text><text x="575" y="154" class="small">Explorer · About the data</text>
+<text x="57" y="202" font-size="24" font-weight="bold">A world of hazards. Unequal impacts.</text>
+<text x="57" y="225" class="small">Question and purpose: compare recorded frequency and reported consequences.</text>
+<rect x="55" y="243" width="740" height="46" rx="3" class="wire"/>
+<text x="68" y="270" class="label">Measure ▾</text><text x="204" y="270" class="label">Hazard ▾</text><text x="335" y="270" class="label">Region ▾</text><text x="468" y="270" class="label">Country ▾</text><text x="715" y="270" class="small">Reset</text>
+<text x="58" y="308" class="small">Current scope and selected period</text><text x="661" y="308" class="small">2026 is partial</text>
+<g class="soft"><rect x="55" y="322" width="175" height="52"/><rect x="243" y="322" width="175" height="52"/><rect x="431" y="322" width="175" height="52"/><rect x="619" y="322" width="176" height="52"/></g>
+<text x="68" y="343" class="label">Records</text><text x="68" y="361" class="small">Countries in selection</text><text x="256" y="343" class="label">Deaths</text><text x="256" y="361" class="small">Reporting coverage</text><text x="444" y="343" class="label">Affected</text><text x="444" y="361" class="small">Reporting coverage</text><text x="632" y="343" class="label">Adjusted damage</text><text x="632" y="361" class="small">Coverage · 2025 USD</text>
+<rect x="55" y="390" width="465" height="208" class="wire"/><text x="69" y="416" class="label">01 / Where? — world choropleth</text>
+<ellipse cx="285" cy="497" rx="192" ry="62" class="soft"/>
+<path d="M115 472 L178 452 218 475 200 502 177 500 196 522 205 548 184 537 159 501Z M272 458 L309 452 340 470 405 461 459 478 429 509 393 497 369 528 343 507 321 514 304 551 284 524 279 494 262 481Z" fill="#b0cdc5"/>
+<text x="69" y="582" class="small">Sequential legend · no records / unreported · zoom</text>
+<rect x="535" y="390" width="260" height="208" class="wire"/><text x="549" y="416" class="label">02 / Compare — ranking</text><text x="549" y="439" class="small">Countries / Disaster types</text>
+<g fill="#92bfb6"><rect x="550" y="458" width="209" height="12"/><rect x="550" y="481" width="173" height="12"/><rect x="550" y="504" width="141" height="12"/><rect x="550" y="527" width="104" height="12"/><rect x="550" y="550" width="79" height="12"/></g><text x="549" y="582" class="small">Select a bar → shared filters</text>
+<rect x="55" y="614" width="740" height="115" class="wire"/><text x="69" y="638" class="label">03 / When? — annual timeline</text><text x="598" y="638" class="small">From ▾ — To ▾</text>
+<path d="M84 693 L136 678 188 685 240 656 292 672 344 683 396 668 448 673 500 655 552 679 604 659 656 673" fill="none" stroke="#5d9f95" stroke-width="2"/><path d="M656 673 L756 695" fill="none" stroke="#c39559" stroke-dasharray="4 4"/>
+<rect x="83" y="706" width="675" height="10" class="soft"/><rect x="280" y="704" width="310" height="14" fill="#b0d7c9" stroke="#4b8b80"/>
+<rect x="55" y="742" width="740" height="43" class="soft"/><text x="69" y="768" class="small">Contextual finding · interpretation and missingness · inspect / download records</text>
+<rect x="865" y="117" width="235" height="685" rx="18" class="wire"/><rect x="881" y="138" width="203" height="25" class="soft"/><text x="895" y="156" class="small">Identity / navigation</text>
+<text x="883" y="194" class="label">Purpose and question</text>
+<rect x="882" y="213" width="202" height="76" class="wire"/><text x="894" y="239" class="small">Measure ▾     Hazard ▾</text><text x="894" y="267" class="small">Region ▾       Country ▾</text>
+<rect x="882" y="302" width="202" height="62" class="soft"/><text x="894" y="327" class="small">Summary cards</text><text x="894" y="348" class="small">2 × 2 arrangement</text>
+<rect x="882" y="379" width="202" height="113" class="wire"/><text x="895" y="405" class="label">01 / Map</text><ellipse cx="981" cy="449" rx="77" ry="28" class="soft"/>
+<rect x="882" y="506" width="202" height="93" class="wire"/><text x="895" y="533" class="label">02 / Ranking</text><path d="M897 551H1061 M897 565H1029 M897 579H1000" stroke="#92bfb6" stroke-width="8"/>
+<rect x="882" y="613" width="202" height="91" class="wire"/><text x="895" y="640" class="label">03 / Timeline</text><path d="M900 684L935 657 962 675 994 658 1025 676 1060 667" fill="none" stroke="#5d9f95" stroke-width="2"/>
+<rect x="882" y="718" width="202" height="62" class="soft"/><text x="895" y="742" class="small">Finding / data notes</text><text x="895" y="762" class="small">Inspect records</text>
+<text x="35" y="834" class="small">Linking: filters → all views. Country selection keeps map/ranking context. Brushing keeps the full timeline visible.</text>
+<text x="35" y="856" class="small">Keyboard alternatives: native country and year selectors; focusable map, bars and annual points.</text>
+</svg>
