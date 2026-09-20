@@ -1,6 +1,6 @@
 ﻿# Global Disaster Risk Explorer
 
-An interactive D3.js prototype for exploring the occurrence and reported impacts of natural disasters. Built for the data visualization class project by Tobias Garcia and Ha Nguyen.
+An interactive D3.js dashboard for exploring the occurrence and reported impacts of natural disasters. Built for the data visualization class project by Tobias Garcia and Ha Nguyen.
 
 ## Run locally
 
@@ -18,7 +18,9 @@ Open **http://127.0.0.1:8000**. Stop the server with Ctrl+C. A local HTTP server
 - Switch between records, reported deaths, affected populations and adjusted damage.
 - Filter by any of the 14 natural-hazard types, region or country/territory.
 - Compare country or hazard rankings and select a bar to filter linked views.
-- Drag the timeline brush handles or use year selectors to change the period.
+- Drag the timeline brush handles or use year selectors to zoom the detail chart; switch between yearly and monthly resolution.
+- Play annual map slices with a fixed color scale, without changing the selected range.
+- Explore seasonal record averages, disaster-type composition, and a geographical treemap with country drill-down.
 - Inspect reporting coverage, individual records, and download the filtered CSV.
 
 The default scope is **2000–2026, all natural hazards**. **2026 is partial.** Adjusted damage uses **2025 USD**. Unknown impacts remain null; recorded totals are not estimates of future risk.
@@ -47,7 +49,7 @@ Outputs include cleaned CSV/JSON, a source checksum and quality report, aggregat
 - [Original project proposal](proposal.md)
 - [Project rubric](project-rubric.md)
 
-The interim implements three linked visualization idioms: choropleth, timeline and ranking. The final rubric requires five; proportional symbols and a relationship scatterplot remain planned. Nothing has been committed or published.
+The dashboard now includes six linked views: choropleth, ranking, detail/overview timeline, seasonal bars, streamgraph and hierarchical treemap. See [implementation and verification](docs/enhancement-verification.md) and [monthly data methods](docs/data-methods.md).
 
 ## Verify
 
@@ -62,7 +64,7 @@ For browser integration checks, leave the local server running, install Playwrig
 python tests/browser_check.py
 ```
 
-The browser check uses the installed Chrome executable on Windows; adjust its path if running elsewhere. It verifies real-data totals and linked interactions, exports, empty/missing data states, mobile layout and local-only asset loading.
+The browser check detects installed Chrome on macOS/Windows, or uses Playwright Chromium on Linux. Set `CHROME_PATH` to override it. It verifies real-data totals and linked interactions, exports, empty/missing data states, mobile layout and local-only asset loading.
 
 ## Sources
 

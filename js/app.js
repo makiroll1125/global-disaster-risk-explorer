@@ -1,13 +1,17 @@
-import { metrics, summarize, filterRows, groupSummary } from './data.js';
+import { renderExtraCharts } from './charts.js';
+import { metrics, summarize, filterRows, groupSummary, timeSeries, validMonth } from './data.js';
 
 const $ = id => document.getElementById(id);
 const d3 = window.d3;
 const tooltip = $('tooltip');
 let rows, metadata, features, state, defaults, projection, geoPath, mapLayer, countries, zoom;
+let playbackTimer;
+let typeColor;
+const motion = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220;
 let brush, brushGroup, brushScale, syncing = false;
 const timelineWidth = () => Math.max(360, $('timeline').clientWidth - 30);
 const full = value => value === null ? 'Not reported' : d3.format(',.0f')(value);
-const compact = value => value === null ? '—' : value === 0 ? '0' : d3.format('.3~s')(value).replace('G', 'B');
+const compact = value => value === null ? ' - ' : value === 0 ? '0' : d3.format('.3~s')(value).replace('G', 'B');
 const valueLabel = (value, metric = state.metric) => value === null ? 'Not reported' : (metric.includes('usd') ? '$' : '') + compact(value);
 const displayType = type => type === 'Mass movement (wet)' ? 'Landslide (wet)' : type;
 const countryNames = new Map();
@@ -39,8 +43,9 @@ function options(id, items, label = d => d, value = d => d) {
 function setup() {
   rows.forEach(r => { countryNames.set(r.iso, r.country); if (r.map_id) mapToISO.set(r.map_id, r.iso); });
   const [minYear, maxYear] = metadata.observed_years;
-  defaults = { metric: 'records', type: '', region: '', country: '', start: minYear, end: maxYear, rankBy: 'country' };
+  defaults = { metric: 'records', type: '', region: '', country: '', start: minYear, end: maxYear, rankBy: 'country', aggregation: 'yearly', mapMode: 'period', mapYear: minYear, playing: false, speed: 700 };
   state = { ...defaults };
+  typeColor = d3.scaleOrdinal([...new Set(rows.map(r => r.type))].sort(), ['#228580','#577fac','#b47736','#926694','#79913e','#ba6563','#638c93','#a58a5a','#676bb0','#c088a1','#43664c','#8d6950','#596e7d','#acaa48']);
   options('type', [...new Set(rows.map(r => r.type))].sort(), displayType);
   options('region', [...new Set(rows.map(r => r.region))].sort());
   updateCountryOptions();
@@ -53,17 +58,27 @@ function setup() {
   });
   $('start-year').addEventListener('change', () => { state.start = +$('start-year').value; state.end = Math.max(state.end, state.start); render(); });
   $('end-year').addEventListener('change', () => { state.end = +$('end-year').value; state.start = Math.min(state.start, state.end); render(); });
-  $('reset').addEventListener('click', () => { state = { ...defaults }; updateCountryOptions(); resetZoom(); render(); });
+  $('reset').addEventListener('click', () => { stopPlayback(); state = { ...defaults }; updateCountryOptions(); resetZoom(); render(); });
   $('all-years').addEventListener('click', () => { state.start = minYear; state.end = maxYear; render(); });
   $('clear-country').addEventListener('click', () => { state.country = ''; render(); });
   for (const group of ['country', 'type']) $('rank-' + group).addEventListener('click', () => { state.rankBy = group; render(); });
   $('download').addEventListener('click', downloadCSV);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
+  $('aggregation').onchange = () => { state.aggregation = $('aggregation').value; render(); };
+  $('map-mode').onchange = () => { stopPlayback(); state.mapMode = $('map-mode').value; render(); };
+  $('map-year').oninput = () => { stopPlayback(); state.mapYear = +$('map-year').value; renderMap(); };
+  for (const [id, step] of [['map-prev', -1], ['map-next', 1]]) $(id).onclick = () => {
+    stopPlayback(); state.mapYear = Math.max(state.start, Math.min(state.end, state.mapYear + step)); renderMap();
+  };
+  $('map-speed').onchange = () => { state.speed = +$('map-speed').value; if (state.playing) { stopPlayback(); startPlayback(); } };
+  $('map-play').onclick = () => { if (state.playing) { stopPlayback(); renderMap(); } else startPlayback(); };
+  $('tree-back').onclick = () => { state.country = ''; state.region = ''; updateCountryOptions(); render(); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { stopPlayback(); renderMap(); } });
   setupMap(); setupBrush(); render();
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { setupBrush(); renderTimeline(); }, 120);
+    resizeTimer = setTimeout(() => { setupBrush(); render(); }, 120);
   });
 }
 function updateCountryOptions() {
@@ -94,15 +109,42 @@ function setupMap() {
 }
 function resetZoom() { d3.select('#map').call(zoom.transform, d3.zoomIdentity); }
 
+function stopPlayback() { clearTimeout(playbackTimer); state.playing = false; }
+function startPlayback() {
+  if (state.mapYear >= state.end) state.mapYear = state.start;
+  state.playing = true; renderMap();
+  const tick = () => {
+    if (!state.playing) return;
+    if (state.mapYear >= state.end) { stopPlayback(); renderMap(); return; }
+    state.mapYear++; renderMap();
+    playbackTimer = setTimeout(tick, state.speed);
+  };
+  playbackTimer = setTimeout(tick, state.speed);
+}
 function renderMap() {
-  const context = filterRows(rows, state, { ignoreCountry: true });
+  hideTip();
+  state.mapYear = Math.max(state.start, Math.min(state.end, state.mapYear));
+  const animated = state.mapMode === 'timeline';
+  const period = animated ? String(state.mapYear) + (state.mapYear === metadata.partial_year ? ' · partial year' : '') : `${state.start}–${state.end}`;
+  $('map-mode').value = state.mapMode; $('playback').hidden = !animated;
+  $('map-year').min = state.start; $('map-year').max = state.end; $('map-year').value = state.mapYear;
+  $('map-current-year').textContent = period; $('map-speed').value = state.speed;
+  $('map-play').textContent = state.playing ? 'Pause' : 'Play';
+  $('map-play').setAttribute('aria-pressed', state.playing);
+  $('map-prev').disabled = state.mapYear <= state.start; $('map-next').disabled = state.mapYear >= state.end;
+  const rangeContext = filterRows(rows, state, { ignoreCountry: !animated });
+  const context = animated ? rangeContext.filter(r => r.year === state.mapYear) : rangeContext;
   const summaries = new Map(groupSummary(context, 'iso', state.metric).map(d => [d.key, d]));
-  const max = d3.max([...summaries.values()], d => d.value) || 1;
+  // Compare annual country totals using one domain over the entire playback range.
+  const max = (animated ? d3.max(d3.groups(rangeContext, r => r.year, r => r.iso).flatMap(([, groups]) => groups.map(([, records]) => summarize(records, state.metric).value))) : d3.max([...summaries.values()], d => d.value)) || 1;
   const color = d3.scaleSequentialSqrt(d3.interpolateRgbBasis(['#d5eeea', '#59ada7', '#086b70', '#14364e'])).domain([0, max]);
-  countries.attr('fill', d => {
+  countries.interrupt();
+  const colored = animated ? countries.transition().duration(motion()) : countries;
+  colored.attr('fill', d => {
     const s = summaries.get(mapToISO.get(d.id));
     return !s ? '#e7ecec' : s.value === null ? 'url(#unknown-pattern)' : color(s.value);
-  }).classed('selected', d => mapToISO.get(d.id) === state.country)
+  });
+  countries.classed('selected', d => mapToISO.get(d.id) === state.country)
     .attr('aria-pressed', d => mapToISO.get(d.id) === state.country ? 'true' : 'false')
     .attr('aria-label', d => {
       const s = summaries.get(mapToISO.get(d.id));
@@ -112,11 +154,11 @@ function renderMap() {
     const iso = mapToISO.get(d.id), s = summaries.get(iso);
     showTip(event, countryNames.get(iso) || d.properties.name,
       s ? `${valueLabel(s.value)} ${metrics[state.metric].unit}` : 'No matching records in this selection',
-      s ? `${coverage(s)}. Select to explore.` : 'Absence of records does not establish absence of disasters.');
+      s ? `${period}. ${coverage(s)}. Select to explore.` : 'Absence of records does not establish absence of disasters.');
   };
   countries.on('pointermove', tip).on('focus', tip).on('pointerleave', hideTip).on('blur', hideTip);
   $('map-title').textContent = state.metric === 'records' ? 'Where are disasters recorded?' : 'Where are reported impacts greatest?';
-  $('map-subtitle').textContent = `${metrics[state.metric].label} by country · ${state.start}–${state.end} · map keeps country comparisons in view`;
+  $('map-subtitle').textContent = `${metrics[state.metric].label} by country · ${period} · ${animated ? 'single-year values' : 'selected-period totals · country comparisons'}`;
   const legend = $('legend'); legend.replaceChildren();
   const ramp = document.createElement('div'); ramp.className = 'legend-ramp';
   ramp.style.background = `linear-gradient(90deg, ${d3.range(0, 1.01, .1).map(t => color(t * t * max)).join(',')})`;
@@ -133,7 +175,7 @@ function renderMap() {
   }
   const mapIds = new Set(features.map(f => f.id));
   const unmapped = context.filter(r => !mapIds.has(r.map_id));
-  $('map-coverage').textContent = `${unmapped.length.toLocaleString()} selected records lack map polygons; retained in the other views. Colors rescale with filters. Country totals are not adjusted for population.`;
+  $('map-coverage').textContent = `${unmapped.length.toLocaleString()} selected records lack map polygons; retained in the other views. ${animated ? 'Color scale fixed across playback years.' : 'Colors rescale with filters.'} Country totals are not adjusted for population.`;
 }
 
 function renderStats(selected) {
@@ -151,12 +193,13 @@ function renderRanking() {
   const byCountry = state.rankBy === 'country';
   const context = filterRows(rows, state, { ignoreCountry: byCountry, ignoreType: !byCountry });
   const groups = groupSummary(context, byCountry ? 'iso' : 'type', state.metric);
-  const ranked = groups.sort((a,b) => (b.value ?? -1) - (a.value ?? -1) || a.key.localeCompare(b.key)).slice(0, 10);
+  const ranked = groups.sort((a,b) => (b.value ?? -1) - (a.value ?? -1) || a.key.localeCompare(b.key)).slice(0, byCountry ? 10 : Infinity);
   const svg = d3.select('#ranking'); svg.selectAll('*').remove();
   $('rank-country').setAttribute('aria-pressed', byCountry);
   $('rank-type').setAttribute('aria-pressed', !byCountry);
   $('rank-title').textContent = byCountry ? 'Compare countries' : 'Compare disaster types';
-  $('ranking-note').textContent = `Top ${Math.min(10, ranked.length)} · ${metrics[state.metric].unit} · ${byCountry ? 'all countries in region' : (state.country ? countryNames.get(state.country) : 'all countries')}`;
+  svg.attr('viewBox', `0 0 430 ${Math.max(410, ranked.length * 38 + 24)}`);
+  $('ranking-note').textContent = `${byCountry ? 'Top ' : ''}${ranked.length} · ${metrics[state.metric].unit} · ${byCountry ? 'all countries in region' : (state.country ? countryNames.get(state.country) : 'all countries')}`;
   if (!ranked.length) { svg.append('text').attr('x', 215).attr('y', 150).attr('text-anchor', 'middle').attr('fill', '#60747b').text('No records match these filters.'); return; }
   const x = d3.scaleLinear().domain([0, d3.max(ranked, d => d.value) || 1]).range([0, 300]);
   const groupsSVG = svg.selectAll('.rank-row').data(ranked).join('g').attr('class', 'rank-row').attr('transform', (d,i) => `translate(12,${i * 38 + 16})`);
@@ -167,8 +210,10 @@ function renderRanking() {
   });
   groupsSVG.append('rect').attr('y', 19).attr('height', 8).attr('width', 300).attr('rx', 2).attr('fill', '#eff4f2');
   groupsSVG.append('rect').attr('class', 'bar').attr('y', 19).attr('height', 8).attr('width', d => d.value === null ? 0 : x(d.value)).attr('rx', 2)
-    .attr('fill', d => d.key === (byCountry ? state.country : state.type) ? '#c07732' : '#228580');
+    .attr('fill', d => byCountry ? (d.key === state.country ? '#c07732' : '#228580') : typeColor(d.key));
   groupsSVG.append('text').attr('x', 400).attr('y', 27).attr('text-anchor', 'end').attr('font-size', 12).attr('font-weight', 600).attr('fill', '#173640').text(d => valueLabel(d.value));
+  groupsSVG.classed('muted-type', d => !byCountry && !!state.type && d.key !== state.type)
+    .classed('active-type', d => !byCountry && d.key === state.type);
   accessibleClick(groupsSVG, (event, d) => { const key = byCountry ? 'country' : 'type'; state[key] = state[key] === d.key ? '' : d.key; hideTip(); render(); });
   groupsSVG.attr('aria-label', d => `${byCountry ? countryNames.get(d.key) : displayType(d.key)}: ${valueLabel(d.value)}. ${coverage(d)}. Select to filter.`)
     .attr('aria-pressed', d => d.key === (byCountry ? state.country : state.type));
@@ -183,36 +228,53 @@ function annualData() {
 }
 function renderTimeline() {
   const annual = annualData();
+  const monthly = state.aggregation === 'monthly';
+  $('timeline-title').textContent = `How do ${metrics[state.metric].label.toLowerCase()} change over time?`;
+  $('aggregation').value = state.aggregation;
+  const context = filterRows(rows, state);
+  const data = timeSeries(context, state.start, state.end, state.metric, monthly);
+  const cutoff = new Date(`${metadata.reporting_cutoff || '2026-09-15'}T00:00:00Z`);
+  // Months after the export are unavailable, never fabricated zero observations.
+  for (const d of data) if (monthly && d.date > cutoff) d.value = null;
   const svg = d3.select('#timeline'); svg.selectAll('*').remove();
+  svg.attr('aria-label', `${monthly ? 'Monthly' : 'Annual'} time series for ${state.start}–${state.end}`);
   const width = timelineWidth(), left = 60, right = width - 20;
-  svg.attr('viewBox', `0 0 ${width} 260`);
-  const x = d3.scaleLinear().domain([defaults.start - .5, defaults.end + .5]).range([left, right]);
-  const y = d3.scaleLinear().domain([0, d3.max(annual, d => d.value) || 1]).nice().range([207, 30]);
-  svg.append('rect').attr('x', x(state.start - .5)).attr('y', 24).attr('width', x(state.end + .5) - x(state.start - .5)).attr('height', 183).attr('fill', '#eff7f3');
-  svg.append('g').attr('class', 'axis grid').attr('transform', `translate(${left},0)`).call(d3.axisLeft(y).ticks(4).tickSize(-(right-left)).tickFormat('')).selectAll('text').remove();
+  svg.attr('viewBox', `0 0 ${width} 260`).attr('data-start', state.start).attr('data-end', state.end);
+  const first = new Date(Date.UTC(state.start, 0, 1));
+  const last = new Date(Date.UTC(state.end, monthly ? 11 : 0, 1));
+  const x = d3.scaleUtc().domain(+first === +last ? [new Date(Date.UTC(state.start, 0, 1)), new Date(Date.UTC(state.start, 11, 31))] : [first, last]).range([left, right]);
+  const y = d3.scaleLinear().domain([0, d3.max(data, d => d.value) || 1]).nice().range([207, 30]);
+  svg.append('g').attr('class', 'axis grid').attr('transform', `translate(${left},0)`).call(d3.axisLeft(y).ticks(4).tickSize(-(right-left)).tickFormat(''));
   svg.append('g').attr('class', 'axis').attr('transform', `translate(${left},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(10).tickFormat(v => valueLabel(v)));
-  const ticks = d3.range(defaults.start, defaults.end - (width < 600 ? 2 : 0) + 1, width < 600 ? 5 : 2);
-  if (!ticks.includes(defaults.end)) ticks.push(defaults.end);
-  svg.append('g').attr('class', 'axis').attr('transform', 'translate(0,207)').call(d3.axisBottom(x).tickValues(ticks).tickFormat(v => v === 2026 ? '2026*' : String(v)).tickSize(0).tickPadding(15));
+  const axis = d3.axisBottom(x).ticks(Math.max(2, Math.floor(width / (monthly ? 105 : 80)))).tickFormat(d3.utcFormat(monthly && state.end - state.start < 4 ? '%b %Y' : '%Y')).tickSize(0).tickPadding(15);
+  if (monthly && state.end - state.start >= 4) axis.ticks(d3.utcYear.every(Math.max(1, Math.ceil((state.end-state.start) / (width / 90)))));
+  if (!monthly) axis.tickValues(d3.range(state.start, state.end + 1, Math.max(1, Math.ceil((state.end-state.start) / (width / 80)))).concat(state.end).filter((v,i,a) => a.indexOf(v) === i).map(y => new Date(Date.UTC(y,0,1))));
+  svg.append('g').attr('class', 'axis timeline-x').attr('transform', 'translate(0,207)').call(axis);
   svg.append('text').attr('x', left).attr('y', 14).attr('font-size', 10).attr('fill', '#60747b').text(metrics[state.metric].unit + (state.metric.includes('usd') ? ' · 2025 prices' : ''));
-  const line = d3.line().defined(d => d.value !== null).x(d => x(d.year)).y(d => y(d.value));
-  // Keep the partial current year visually separate from complete annual observations.
-  svg.append('path').datum(annual.filter(d => d.year < 2026)).attr('fill', 'none').attr('stroke', '#117b78').attr('stroke-width', 2.5).attr('d', line);
-  svg.append('path').datum(annual.filter(d => d.year >= 2025)).attr('fill', 'none').attr('stroke', '#bc782f').attr('stroke-width', 2).attr('stroke-dasharray', '5 4').attr('d', line);
-  const dots = svg.selectAll('.timeline-dot').data(annual.filter(d => d.value !== null)).join('circle').attr('class', 'timeline-dot').attr('cx', d => x(d.year)).attr('cy', d => y(d.value)).attr('r', 4)
-    .style('fill', d => d.year === 2026 ? '#bc782f' : '#117b78').attr('tabindex', 0).attr('role', 'img')
-    .attr('aria-label', d => `${d.year}${d.year === 2026 ? ' partial year' : ''}: ${full(d.value)} ${metrics[state.metric].unit}. ${coverage(d)}`);
-  const tip = (event, d) => showTip(event, `${d.year}${d.year === 2026 ? ' · partial year' : ''}`, `${full(d.value)} ${metrics[state.metric].unit}`, coverage(d));
+  const line = d3.line().defined(d => d.value !== null).x(d => x(d.date)).y(d => y(d.value));
+  svg.append('path').datum(data.filter(d => d.year < metadata.partial_year)).attr('fill', 'none').attr('stroke', '#117b78').attr('stroke-width', 2.5).attr('d', line);
+  const partialIndex = data.findIndex(d => d.year === metadata.partial_year);
+  if (partialIndex >= 0) svg.append('path').datum(data.slice(Math.max(0, partialIndex - 1))).attr('fill', 'none').attr('stroke', '#bc782f').attr('stroke-width', 2).attr('stroke-dasharray', '5 4').attr('d', line);
+  const dateLabel = d => (monthly ? d3.utcFormat('%b %Y')(d.date) : d.year) + (d.year === metadata.partial_year ? ' · partial reporting year' : '');
+  const dots = svg.selectAll('.timeline-dot').data(data.filter(d => d.value !== null)).join('circle').attr('class', 'timeline-dot').attr('cx', d => x(d.date)).attr('cy', d => y(d.value)).attr('r', monthly ? 3 : 4)
+    .style('fill', d => d.year === metadata.partial_year ? '#bc782f' : '#117b78').attr('tabindex', 0).attr('role', 'img')
+    .attr('aria-label', d => `${dateLabel(d)}: ${full(d.value)} ${metrics[state.metric].unit}. ${coverage(d)}`);
+  const tip = (event, d) => showTip(event, dateLabel(d), `${full(d.value)} ${metrics[state.metric].unit}`, coverage(d));
   dots.on('pointermove', tip).on('focus', tip).on('pointerleave', hideTip).on('blur', hideTip);
-  if (!annual.some(d => d.value !== null)) svg.append('text').attr('x', width / 2).attr('y', 110).attr('text-anchor', 'middle').attr('fill', '#60747b').attr('font-size', 12).text('No reported values for this selection.');
-  svg.append('line').attr('x1', x(2025.5)).attr('x2', x(2025.5)).attr('y1', 26).attr('y2', 207).attr('stroke', '#c6a47a').attr('stroke-dasharray', '3 3');
-  $('timeline-note').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} · ${state.type ? displayType(state.type) : 'all natural hazards'} · annual ${metrics[state.metric].label.toLowerCase()} by start year`;
-  const miniY = d3.scaleLinear().domain(y.domain()).range([49, 7]);
+  if (!context.length || !data.some(d => d.value !== null)) svg.append('text').attr('x', width / 2).attr('y', 110).attr('text-anchor', 'middle').attr('fill', '#60747b').attr('font-size', 12).text(!context.length ? 'No records match these filters.' : 'No reported values for this selection.');
+  const dated = context.filter(validMonth);
+  const future = dated.filter(r => new Date(Date.UTC(r.year, r.start_month - 1, 1)) > cutoff).length;
+  const known = dated.length - future;
+  $('timeline-note').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} · ${state.type ? displayType(state.type) : 'all natural hazards'} · ${state.start}–${state.end} · ${monthly ? 'monthly' : 'annual'} ${metrics[state.metric].label.toLowerCase()} by start date${monthly ? ` · ${known.toLocaleString()}/${context.length.toLocaleString()} records have a valid month; ${context.length-dated.length} missing months and ${future} post-export dates excluded. Months after 15 Sep 2026 are unavailable; September and 2026 are partial.` : ''}`;
+  const miniY = d3.scaleLinear().domain([0, d3.max(annual, d => d.value) || 1]).range([49, 7]);
   d3.select('#brush .mini-line').datum(annual).attr('d', d3.line().defined(d => d.value !== null).x(d => brushScale(d.year)).y(d => miniY(d.value)));
-  syncing = true;
-  brushGroup.call(brush.move, [brushScale(state.start - .5), brushScale(state.end + .5)]);
-  syncing = false;
+  if (!brushing) {
+    syncing = true;
+    brushGroup.call(brush.move, [brushScale(state.start - .5), brushScale(state.end + .5)]);
+    syncing = false;
+  }
 }
+let brushing = false;
 function setupBrush() {
   const width = timelineWidth(), left = 60, right = width - 20;
   brushScale = d3.scaleLinear().domain([defaults.start - .5, defaults.end + .5]).range([left, right]);
@@ -220,12 +282,13 @@ function setupBrush() {
   svg.selectAll('*').remove(); svg.attr('viewBox', `0 0 ${width} 70`);
   svg.append('rect').attr('x', left).attr('y', 3).attr('width', right-left).attr('height', 50).attr('fill', '#f1f5f3');
   svg.append('path').attr('class', 'mini-line').attr('fill', 'none').attr('stroke', '#73a49c').attr('stroke-width', 1.5);
-  brush = d3.brushX().extent([[left, 3], [right, 53]]).on('end', event => {
+  brush = d3.brushX().extent([[left, 3], [right, 53]]).on('brush end', event => {
     if (syncing || !event.sourceEvent) return;
     if (event.selection) {
       state.start = Math.max(defaults.start, Math.min(defaults.end, Math.round(brushScale.invert(event.selection[0]) + .5)));
       state.end = Math.max(state.start, Math.min(defaults.end, Math.round(brushScale.invert(event.selection[1]) - .5)));
     } else { state.start = defaults.start; state.end = defaults.end; }
+    brushing = event.type !== 'end';
     hideTip(); render();
   });
   brushGroup = svg.append('g').attr('class', 'brush').call(brush);
@@ -254,12 +317,13 @@ function renderTable(selected) {
 }
 function downloadCSV() {
   const selected = filterRows(rows, state);
-  const fields = ['id', 'year', 'iso', 'country', 'region', 'type', 'deaths', 'affected', 'damage_adjusted_usd'];
+  const fields = ['id', 'year', 'start_month', 'year_month', 'iso', 'country', 'region', 'type', 'deaths', 'affected', 'damage_adjusted_usd'];
   const url = URL.createObjectURL(new Blob([d3.csvFormat(selected, fields)], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a'); a.href = url; a.download = `emdat-filtered-${state.start}-${state.end}.csv`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function render() {
+  hideTip();
   for (const id of ['metric', 'type', 'region', 'country']) $(id).value = state[id];
   $('start-year').value = state.start; $('end-year').value = state.end;
   $('year-range').textContent = `${state.start}–${state.end}${state.end === 2026 ? ' · 2026 partial' : ''}`;
@@ -267,6 +331,7 @@ function render() {
   const selected = filterRows(rows, state);
   $('scope').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} / ${state.type ? displayType(state.type) : 'All 14 natural hazards'} / ${state.start}–${state.end} · ${selected.length.toLocaleString()} records`;
   renderStats(selected); renderMap(); renderRanking(); renderTimeline(); renderInsight(selected); renderTable(selected);
+  renderExtraCharts({ rows, state, defaults, metadata, typeColor, showTip, hideTip, accessibleClick, render, countryNames });
   document.body.dataset.ready = 'true';
 }
 

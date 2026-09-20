@@ -43,6 +43,10 @@
         <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear country ×</button></div>
         <p class="panel-subtitle" id="map-subtitle">Country totals · select a country to explore its history</p>
         <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="Interactive world map of reported disasters"></svg><div class="map-controls"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom">⤢</button></div></div>
+        <div class="playback-controls">
+          <label>Map view <select id="map-mode"><option value="period">Selected period</option><option value="timeline">Animated timeline</option></select></label>
+          <div id="playback" hidden><button id="map-prev" aria-label="Previous year">←</button><button id="map-play">Play</button><button id="map-next" aria-label="Next year">→</button><input id="map-year" type="range" aria-label="Map playback year"><output id="map-current-year"></output><label>Speed <select id="map-speed"><option value="1200">Slow</option><option value="700" selected>Normal</option><option value="350">Fast</option></select></label></div>
+        </div>
         <div class="map-footer"><div id="legend"></div><span class="map-hint">Scroll to zoom · drag to pan</span></div>
         <p class="footnote" id="map-coverage"></p>
       </section>
@@ -56,18 +60,33 @@
     </div>
 
     <section class="panel timeline-panel" aria-labelledby="timeline-title">
-      <div class="panel-heading"><div><p class="eyebrow">03 / FOLLOW THE TIMELINE</p><h2 id="timeline-title">How does the picture change over time?</h2></div>
-        <div class="year-controls"><label>From<select id="start-year" aria-label="Start year"></select></label><span>—</span><label>To<select id="end-year" aria-label="End year"></select></label><button id="all-years" class="text-button">All years</button></div></div>
+      <div class="panel-heading"><div><p class="eyebrow">03 / FOLLOW THE TIMELINE</p><h2 id="timeline-title">How does number of disasters change over time?</h2></div>
+        <div class="year-controls"><label>From<select id="start-year" aria-label="Start year"></select></label><span> - </span><label>To<select id="end-year" aria-label="End year"></select></label><button id="all-years" class="text-button">All years</button></div></div>
+      <div class="chart-controls"><label>Aggregation <select id="aggregation"><option value="yearly">Yearly</option><option value="monthly">Monthly</option></select></label></div>
       <p id="timeline-note" class="panel-subtitle"></p>
       <svg id="timeline" viewBox="0 0 1300 260" role="img" aria-label="Annual time series"></svg>
       <div class="brush-label"><span>DRAG THE HANDLES TO SELECT A PERIOD</span><strong id="year-range"></strong></div>
       <svg id="brush" viewBox="0 0 1300 70" aria-label="Drag to filter years; the From and To controls provide keyboard access"></svg>
-      <p class="footnote">The timeline keeps all years in view for context. Shading marks your selected period. Gaps indicate records with no reported values; 2026 is incomplete.</p>
+      <p class="footnote">The main chart expands your selected period. The lower overview retains all years; its brush selects whole calendar years. Gaps indicate records with no reported values; 2026 is incomplete.</p>
     </section>
 
+    <section class="panel extra-panel" aria-labelledby="season-title">
+      <div class="panel-heading"><div><p class="eyebrow">04 / SEASONAL PATTERNS</p><h2 id="season-title">Average recorded disasters per calendar month</h2></div></div>
+      <p class="panel-subtitle" id="season-note"></p><svg id="seasonal" role="img" aria-label="Average disaster records by calendar month"></svg>
+    </section>
+    <section class="panel extra-panel" aria-labelledby="stream-title">
+      <div class="panel-heading"><div><p class="eyebrow">05 / DISASTER COMPOSITION OVER TIME</p><h2 id="stream-title">How does the composition of disasters change over time?</h2></div></div>
+      <p class="panel-subtitle">Colored layers represent disaster types and annual record counts. The outlined interval is your selected period; the full historical context stays visible. 2026 is partial.</p>
+      <div id="stream-legend" class="chart-legend"></div><svg id="streamgraph" role="img" aria-label="Disaster type streamgraph"></svg><p id="stream-note" class="footnote"></p>
+    </section>
+    <section class="panel extra-panel" aria-labelledby="tree-title">
+      <div class="panel-heading"><div><p class="eyebrow">06 / GEOGRAPHIC DISASTER DISTRIBUTION</p><h2 id="tree-title">Where are disaster records concentrated?</h2></div><button id="tree-back" class="text-button">World overview</button></div>
+      <p class="panel-subtitle" id="tree-note"></p><div id="tree-legend" class="chart-legend"></div><svg id="treemap" role="img" aria-label="Region, country and disaster type treemap"></svg>
+      <p class="footnote">Rectangle area represents the number of recorded disasters. Colors group countries geographically. Select a country to explore its disaster types. In a selected country, select a disaster type to filter; select it again to clear.</p>
+    </section>
     <section class="reading-grid" id="about">
       <div class="reading-card"><p class="eyebrow">READ THE PATTERN</p><h2 id="insight-title">Frequency is only one part of the story.</h2><p id="insight-text">Switch between records, deaths, affected populations and damage to compare different dimensions of disaster impacts.</p></div>
-      <details class="reading-card" open><summary>What these numbers mean</summary><p>A record is one disaster’s impact in one country. A disaster crossing borders appears more than once. Affected totals can include the same people across multiple disasters.</p><p>Blank impacts remain unknown, absent or unreported—not automatically zero. Coverage shows the share of records with a value. Damage is inflation-adjusted to <strong>2025 US dollars</strong>; 2026 adjusted figures are unavailable.</p><p>This is a history of reported major disasters, not a forecast of risk or a comparison adjusted for population. Reporting differences affect comparisons and trends.</p></details>
+      <details class="reading-card" open><summary>What these numbers mean</summary><p>A record is one disaster’s impact in one country. A disaster crossing borders appears more than once. Affected totals can include the same people across multiple disasters.</p><p>Blank impacts remain unknown, absent or unreported - not automatically zero. Coverage shows the share of records with a value. Damage is inflation-adjusted to <strong>2025 US dollars</strong>; 2026 adjusted figures are unavailable.</p><p>This is a history of reported major disasters, not a forecast of risk or a comparison adjusted for population. Reporting differences affect comparisons and trends.</p></details>
     </section>
     <details class="record-details"><summary>Inspect the filtered records <span id="record-count"></span></summary><p>First 100 matching records, ordered by start year and identifier. Download the full filtered selection for further analysis.</p><button id="download" class="text-button">Download filtered CSV ↓</button><div class="table-scroll"><table><thead><tr><th>Record</th><th>Year</th><th>Country</th><th>Disaster type</th><th>Deaths</th><th>Affected</th><th>Adjusted US$</th></tr></thead><tbody id="record-body"></tbody></table></div></details>
   </main>

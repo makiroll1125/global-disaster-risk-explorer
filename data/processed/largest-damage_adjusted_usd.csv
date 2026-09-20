@@ -1,21 +1,21 @@
-id,country,iso,region,type,event_id,year,subtype,event_name,deaths,affected,damage_usd,damage_adjusted_usd,start_month,start_day,end_year,map_id
-2011-0082-JPN,Japan,JPN,Asia,Earthquake,2011-0082,2011,Tsunami,,19846.0,368820.0,210000000000.0,300561348000.0,3.0,11.0,2011,392
-2005-0467-USA,United States of America,USA,Americas,Storm,2005-0467,2005,Tropical cyclone,Katrina,1833.0,500000.0,125000000000.0,206065474000.0,8.0,29.0,2005,840
-2008-0192-CHN,China,CHN,Asia,Earthquake,2008-0192,2008,Ground movement,,87476.0,45976596.0,85000000000.0,127100952000.0,5.0,12.0,2008,156
-2017-0362-USA,United States of America,USA,Americas,Storm,2017-0362,2017,Tropical cyclone,Hurricane Harvey,88.0,582024.0,95000000000.0,124774087000.0,8.0,25.0,2017,840
-2022-0614-USA,United States of America,USA,Americas,Storm,2022-0614,2022,Tropical cyclone,Hurricane 'Ian',152.0,,100000000000.0,110007737000.0,9.0,28.0,2022,840
-2017-0383-PRI,Puerto Rico,PRI,Americas,Storm,2017-0383,2017,Tropical cyclone,Hurricane 'Maria',64.0,750000.0,68000000000.0,89311978000.0,9.0,19.0,2017,630
-2024-0693-USA,United States of America,USA,Americas,Storm,2024-0693,2024,Tropical cyclone,Tropical cyclone 'Helene',219.0,,80000000000.0,82105029000.0,9.0,25.0,2024,840
-2021-0551-USA,United States of America,USA,Americas,Storm,2021-0551,2021,Tropical cyclone,Tropical storm 'Ida',96.0,14000.0,65000000000.0,77227433000.0,8.0,28.0,2021,840
-2017-0381-USA,United States of America,USA,Americas,Storm,2017-0381,2017,Tropical cyclone,Hurricane 'Irma',97.0,70000.0,57000000000.0,74864452000.0,9.0,10.0,2017,840
-2012-0410-USA,United States of America,USA,Americas,Storm,2012-0410,2012,Tropical cyclone,Hurricane 'Sandy',158.0,,50000000000.0,70111391000.0,10.0,28.0,2012,840
-2011-0326-THA,Thailand,THA,Asia,Flood,2011-0326,2011,Riverine flood,,813.0,9500000.0,40000000000.0,57249781000.0,8.0,5.0,2012,764
-2025-0008-USA,United States of America,USA,Americas,Wildfire,2025-0008,2025,Wildfire (General),"'Palisades', 'Eaton', 'Sunset', 'Kenneth', 'Hurs't, 'Lidia' fires",31.0,4.0,53000000000.0,53000000000.0,1.0,6.0,2025,840
-2004-0532-JPN,Japan,JPN,Asia,Earthquake,2004-0532,2004,Ground movement,,40.0,62183.0,28000000000.0,47724716000.0,10.0,23.0,2004,392
-2021-0411-DEU,Germany,DEU,Europe,Flood,2021-0411,2021,Flood (General),,226.0,1000.0,40000000000.0,47524574000.0,7.0,12.0,2021,276
-2008-0384-USA,United States of America,USA,Americas,Storm,2008-0384,2008,Tropical cyclone,Hurricane Ike,82.0,200000.0,30000000000.0,44859160000.0,9.0,12.0,2008,840
-2010-0091-CHL,Chile,CHL,Americas,Earthquake,2010-0091,2010,Tsunami,,562.0,2671556.0,30000000000.0,44292803000.0,2.0,27.0,2010,152
-2024-0722-USA,United States of America,USA,Americas,Storm,2024-0722,2024,Tropical cyclone,Hurricane 'Milton',32.0,1013.0,38000000000.0,38999889000.0,10.0,9.0,2024,840
-2023-0054-TUR,Türkiye,TUR,Asia,Earthquake,2023-0054,2023,Ground movement,,53000.0,16107000.0,34000000000.0,35923858000.0,2.0,6.0,2023,792
-2021-0096-USA,United States of America,USA,Americas,Storm,2021-0096,2021,Blizzard/Winter storm,,235.0,10.0,30000000000.0,35643430000.0,2.0,10.0,2021,840
-2008-0020-CHN,China,CHN,Asia,Extreme temperature,2008-0020,2008,Severe winter conditions,,129.0,77000000.0,21100000000.0,31550942000.0,1.0,10.0,2008,156
+id,country,iso,region,type,event_id,year,subtype,event_name,deaths,affected,damage_usd,damage_adjusted_usd,start_month,start_day,end_year,year_month,map_id
+2011-0082-JPN,Japan,JPN,Asia,Earthquake,2011-0082,2011,Tsunami,,19846.0,368820.0,210000000000.0,300561348000.0,3.0,11.0,2011,2011-03,392
+2005-0467-USA,United States of America,USA,Americas,Storm,2005-0467,2005,Tropical cyclone,Katrina,1833.0,500000.0,125000000000.0,206065474000.0,8.0,29.0,2005,2005-08,840
+2008-0192-CHN,China,CHN,Asia,Earthquake,2008-0192,2008,Ground movement,,87476.0,45976596.0,85000000000.0,127100952000.0,5.0,12.0,2008,2008-05,156
+2017-0362-USA,United States of America,USA,Americas,Storm,2017-0362,2017,Tropical cyclone,Hurricane Harvey,88.0,582024.0,95000000000.0,124774087000.0,8.0,25.0,2017,2017-08,840
+2022-0614-USA,United States of America,USA,Americas,Storm,2022-0614,2022,Tropical cyclone,Hurricane 'Ian',152.0,,100000000000.0,110007737000.0,9.0,28.0,2022,2022-09,840
+2017-0383-PRI,Puerto Rico,PRI,Americas,Storm,2017-0383,2017,Tropical cyclone,Hurricane 'Maria',64.0,750000.0,68000000000.0,89311978000.0,9.0,19.0,2017,2017-09,630
+2024-0693-USA,United States of America,USA,Americas,Storm,2024-0693,2024,Tropical cyclone,Tropical cyclone 'Helene',219.0,,80000000000.0,82105029000.0,9.0,25.0,2024,2024-09,840
+2021-0551-USA,United States of America,USA,Americas,Storm,2021-0551,2021,Tropical cyclone,Tropical storm 'Ida',96.0,14000.0,65000000000.0,77227433000.0,8.0,28.0,2021,2021-08,840
+2017-0381-USA,United States of America,USA,Americas,Storm,2017-0381,2017,Tropical cyclone,Hurricane 'Irma',97.0,70000.0,57000000000.0,74864452000.0,9.0,10.0,2017,2017-09,840
+2012-0410-USA,United States of America,USA,Americas,Storm,2012-0410,2012,Tropical cyclone,Hurricane 'Sandy',158.0,,50000000000.0,70111391000.0,10.0,28.0,2012,2012-10,840
+2011-0326-THA,Thailand,THA,Asia,Flood,2011-0326,2011,Riverine flood,,813.0,9500000.0,40000000000.0,57249781000.0,8.0,5.0,2012,2011-08,764
+2025-0008-USA,United States of America,USA,Americas,Wildfire,2025-0008,2025,Wildfire (General),"'Palisades', 'Eaton', 'Sunset', 'Kenneth', 'Hurs't, 'Lidia' fires",31.0,4.0,53000000000.0,53000000000.0,1.0,6.0,2025,2025-01,840
+2004-0532-JPN,Japan,JPN,Asia,Earthquake,2004-0532,2004,Ground movement,,40.0,62183.0,28000000000.0,47724716000.0,10.0,23.0,2004,2004-10,392
+2021-0411-DEU,Germany,DEU,Europe,Flood,2021-0411,2021,Flood (General),,226.0,1000.0,40000000000.0,47524574000.0,7.0,12.0,2021,2021-07,276
+2008-0384-USA,United States of America,USA,Americas,Storm,2008-0384,2008,Tropical cyclone,Hurricane Ike,82.0,200000.0,30000000000.0,44859160000.0,9.0,12.0,2008,2008-09,840
+2010-0091-CHL,Chile,CHL,Americas,Earthquake,2010-0091,2010,Tsunami,,562.0,2671556.0,30000000000.0,44292803000.0,2.0,27.0,2010,2010-02,152
+2024-0722-USA,United States of America,USA,Americas,Storm,2024-0722,2024,Tropical cyclone,Hurricane 'Milton',32.0,1013.0,38000000000.0,38999889000.0,10.0,9.0,2024,2024-10,840
+2023-0054-TUR,Türkiye,TUR,Asia,Earthquake,2023-0054,2023,Ground movement,,53000.0,16107000.0,34000000000.0,35923858000.0,2.0,6.0,2023,2023-02,792
+2021-0096-USA,United States of America,USA,Americas,Storm,2021-0096,2021,Blizzard/Winter storm,,235.0,10.0,30000000000.0,35643430000.0,2.0,10.0,2021,2021-02,840
+2008-0020-CHN,China,CHN,Asia,Extreme temperature,2008-0020,2008,Severe winter conditions,,129.0,77000000.0,21100000000.0,31550942000.0,1.0,10.0,2008,2008-01,156
