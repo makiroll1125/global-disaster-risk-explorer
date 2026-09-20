@@ -48,3 +48,15 @@ button:disabled{cursor:default;opacity:.5}.tree-navigation{display:flex;align-it
 @media(max-width:720px){.about-section{padding:20px 16px}.about-stats{grid-template-columns:1fr 1fr}.about-stats strong{font-size:21px}.about-columns,.three-columns,.preview-grid{grid-template-columns:1fr}.preview-grid figure:nth-child(2){grid-column:auto;grid-row:auto}.about-table table{min-width:540px}.about-contents{gap:12px 18px}}
 .map-toolbar .radio-segment{flex-shrink:0}.preview-grid{grid-template-columns:1.65fr 1fr;align-items:start}
 @media(max-width:720px){.map-toolbar .radio-segment{flex:0 0 100%;width:100%}.map-toolbar .map-years{width:100%;justify-content:flex-end}.preview-grid{grid-template-columns:1fr}}
+
+/* One global filter bar. Local controls never share their state with other cards. */
+:root{--nav-height:84px;--filter-height:0px}
+html{scroll-padding-top:calc(var(--nav-height) + var(--filter-height) + 12px)}
+.masthead{position:sticky;top:0;z-index:40}
+.filter-bar{position:sticky;top:var(--nav-height);z-index:35;display:block;padding:10px 12px;overflow:visible;box-shadow:0 3px 8px #1736400c}
+.filter-fields{display:grid;grid-template-columns:1.1fr 1.1fr .85fr 1.25fr auto;gap:14px;align-items:end}
+.filter-bar select{margin-top:5px;padding-top:8px;padding-bottom:8px}.filter-bar .reset{grid-column:auto;font-size:11px;padding:8px 0}
+#filter-toggle{display:none}.tooltip{z-index:60}.local-range{margin:14px 24px;justify-content:flex-start}
+.panel [tabindex],.panel button,.panel select{scroll-margin-top:12px}
+@media(max-width:1000px) and (min-width:721px){.filter-fields{gap:8px;grid-template-columns:repeat(4,minmax(0,1fr)) auto}.filter-bar label{letter-spacing:.5px}.filter-bar select{font-size:11px}}
+@media(max-width:720px){:root{--nav-height:66px}.filter-bar{padding:7px 10px}.filter-fields{grid-template-columns:1fr 1fr;gap:9px;padding-top:10px}.filter-bar .reset{grid-column:1/-1;padding:4px 0}.filter-bar select{padding:7px;font-size:11px}#filter-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;background:white;border:0;padding:6px 0;font-size:12px;font-weight:650;color:var(--teal)}#filter-toggle:after{content:'Show ▾'}#filter-toggle[aria-expanded=true]:after{content:'Hide ▴'}#filter-toggle[aria-expanded=false]+.filter-fields{display:none}.local-range{margin:12px 18px}}

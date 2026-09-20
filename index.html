@@ -23,15 +23,18 @@
       <div><p class="eyebrow">GLOBAL DISASTER RISK EXPLORER · 2000–2026</p>
         <h1>A world of hazards.<br><span>Unequal impacts.</span></h1>
         <p class="intro-copy">Explore where major natural disasters are recorded, how their impacts differ, and how the picture changes over time.</p></div>
-      <aside class="intro-note"><span class="small-dot"></span><strong>Start with a place. Follow a pattern.</strong><p>Select a country on the map, compare an impact measure, then narrow the years below.</p><span class="source-tag">EM-DAT / CRED · UCLouvain</span></aside>
+      <aside class="intro-note"><span class="small-dot"></span><strong>Start with a place. Follow a pattern.</strong><p>Use global filters to compare places and hazards. Explore each chart independently with its own controls.</p><span class="source-tag">EM-DAT / CRED · UCLouvain</span></aside>
     </section>
 
     <section class="filter-bar" aria-label="Explorer filters">
+      <button id="filter-toggle" aria-expanded="false" aria-controls="filter-fields">Global filters</button>
+      <div id="filter-fields" class="filter-fields">
       <label>IMPACT MEASURE<select id="metric"><option value="records">Disaster records</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label>
       <label>DISASTER TYPE<select id="type"><option value="">All natural hazards</option></select></label>
       <label>REGION<select id="region"><option value="">All regions</option></select></label>
       <label>COUNTRY / TERRITORY<select id="country"><option value="">All countries & territories</option></select></label>
       <button class="reset" id="reset">Reset filters <span aria-hidden="true">↺</span></button>
+      </div>
     </section>
 
     <div class="context-line"><p id="scope" aria-live="polite">Loading local EM-DAT data…</p><span class="partial">2026 is a partial year</span></div>
@@ -40,8 +43,8 @@
 
     <div class="main-grid">
       <section class="panel map-panel" id="geography" aria-labelledby="map-title">
-        <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear country ×</button></div>
-        <p class="panel-subtitle" id="map-subtitle">Country totals · select a country to explore its history</p>
+        <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear map highlight ×</button></div>
+        <p class="panel-subtitle" id="map-subtitle">Country totals · select a country to highlight it in this map</p>
         <div class="map-stage">
           <div class="map-toolbar">
             <fieldset class="radio-segment" id="map-mode"><legend class="sr-only">Map view</legend>
@@ -59,9 +62,10 @@
       <section class="panel ranking-panel" id="comparison" aria-labelledby="rank-title">
         <div class="panel-heading"><div><p class="eyebrow">02 / COMPARE IMPACTS</p><h2 id="rank-title">The global picture</h2></div></div>
         <div class="segmented" role="group" aria-label="Rank by"><button id="rank-country" aria-pressed="true">Countries</button><button id="rank-type" aria-pressed="false">Disaster types</button></div>
-        <p id="ranking-note" class="panel-subtitle"></p>
+        <div id="ranking-range" class="year-controls local-range" data-chart="Ranking"></div>
+      <p id="ranking-note" class="panel-subtitle"></p>
         <svg id="ranking" viewBox="0 0 430 410" role="img" aria-label="Interactive ranking"></svg>
-        <p class="footnote">Select a bar to filter the linked views. Values show reported totals.</p>
+        <p class="footnote">Select a bar to highlight it only in this chart. Values show reported totals.</p>
       </section>
     </div>
 
@@ -70,7 +74,7 @@
         <div class="year-controls"><label>From<select id="start-year" aria-label="Start year"></select></label><span> - </span><label>To<select id="end-year" aria-label="End year"></select></label><button id="all-years" class="text-button">All years</button></div></div>
       <div class="chart-controls"><fieldset class="radio-segment" id="aggregation"><legend class="sr-only">Historical aggregation</legend>
         <label><input type="radio" name="aggregation" value="yearly" checked><span>Yearly</span></label><label><input type="radio" name="aggregation" value="monthly"><span>Monthly</span></label>
-      </fieldset><span>Historical range also applies to summaries, rankings, seasonal patterns and treemap; the map has its own range.</span></div>
+      </fieldset><span>These controls affect only this timeline. Use the global filter bar to change all charts.</span></div>
       <p id="timeline-note" class="panel-subtitle"></p>
       <svg id="timeline" viewBox="0 0 1300 260" role="img" aria-label="Annual time series"></svg>
       <div class="brush-label"><span>DRAG THE HANDLES TO SELECT A PERIOD</span><strong id="year-range"></strong></div>
@@ -80,18 +84,21 @@
 
     <section class="panel extra-panel" aria-labelledby="season-title">
       <div class="panel-heading"><div><p class="eyebrow">04 / SEASONAL PATTERNS</p><h2 id="season-title">Average recorded disasters per calendar month</h2></div></div>
+      <div id="season-range" class="year-controls local-range" data-chart="Seasonal chart"></div>
       <p class="panel-subtitle" id="season-note"></p><svg id="seasonal" role="img" aria-label="Average disaster records by calendar month"></svg>
     </section>
     <section class="panel extra-panel" aria-labelledby="stream-title">
       <div class="panel-heading"><div><p class="eyebrow">05 / DISASTER COMPOSITION OVER TIME</p><h2 id="stream-title">How does the composition of disasters change over time?</h2></div></div>
       <p class="panel-subtitle">Colored layers represent disaster types and annual record counts. The outlined interval is your selected period; the full historical context stays visible. 2026 is partial.</p>
+      <div id="stream-range" class="year-controls local-range" data-chart="Streamgraph"></div>
       <div id="stream-legend" class="chart-legend"></div><svg id="streamgraph" role="img" aria-label="Disaster type streamgraph"></svg><p id="stream-note" class="footnote"></p>
     </section>
     <section class="panel extra-panel" aria-labelledby="tree-title">
       <div class="panel-heading"><div><p class="eyebrow">06 / GEOGRAPHIC DISASTER DISTRIBUTION</p><h2 id="tree-title">Where are disaster records concentrated?</h2></div></div>
+      <div id="tree-range" class="year-controls local-range" data-chart="Treemap"></div>
       <div class="tree-navigation"><button id="tree-back" class="quiet-button" disabled>← Back</button><nav id="tree-breadcrumb" aria-label="Treemap location"></nav><button id="tree-world" class="quiet-button" disabled>Reset to World</button></div>
       <p class="panel-subtitle" id="tree-note"></p><div id="tree-legend" class="chart-legend"></div><svg id="treemap" role="img" aria-label="Region, country and disaster type treemap"></svg>
-      <p class="footnote">Rectangle area represents the number of recorded disasters. Colors group countries geographically. Select a region or country to explore inside this chart. Breadcrumbs and Back return to parent levels. Within a country, selecting a disaster type filters the linked views; select it again to clear. Global geography filters still apply when returning to World.</p>
+      <p class="footnote">Rectangle area represents the number of recorded disasters. Colors group countries geographically. Select a region or country to explore inside this chart. Breadcrumbs and Back return to parent levels. Within a country, selecting a disaster type highlights it only here; select it again to clear. Global geography filters still apply when returning to World.</p>
     </section>
     <section class="reading-grid" id="about">
       <div class="reading-card"><p class="eyebrow">READ THE PATTERN</p><h2 id="insight-title">Frequency is only one part of the story.</h2><p id="insight-text">Switch between records, deaths, affected populations and damage to compare different dimensions of disaster impacts.</p></div>
