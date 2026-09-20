@@ -44,6 +44,18 @@ class DataSemantics(unittest.TestCase):
         self.assertEqual(audit['excluded_rows'], 2)
         self.assertEqual(audit['invalid_numeric_values']['Total Deaths'], 1)
 
+    def test_month_validation(self):
+        fixtures = [record(f'2020-{i:04d}-USA', **{'Start Month': month})
+                    for i, month in enumerate([1, 12, None, 0, 13, 1.5], 1)]
+        df, audit = clean(pd.DataFrame(fixtures), 2000, 2025)
+        self.assertEqual(df.year_month.notna().sum(), 2)
+        self.assertEqual(df.year_month.iloc[0], '2020-01')
+        self.assertEqual(audit['monthly_coverage']['excluded_month_records'], 4)
+        self.assertEqual(len(df), 6)
+        monthly = aggregate(df.dropna(subset=['year_month']), ['year_month'])
+        self.assertEqual(monthly.records.sum(), 2)
+        self.assertTrue(monthly.deaths.isna().all())
+
     def test_duplicate_policy(self):
         df, audit = clean(pd.DataFrame([record(), record()]), 2000, 2025)
         self.assertEqual(audit['exact_duplicates_removed'], 1)

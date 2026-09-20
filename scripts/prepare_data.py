@@ -74,6 +74,18 @@ def clean(frame, start, end, all_natural=False):
     # Keep incomplete date precision: never invent January 1 for year-only records.
     for source, target in [('Start Month', 'start_month'), ('Start Day', 'start_day'), ('End Year', 'end_year')]:
         result[target] = pd.to_numeric(df.get(source, pd.Series(index=df.index, dtype=float)), errors='coerce')
+    month = result['start_month']
+    valid_month = month.notna() & month.between(1, 12) & month.mod(1).eq(0)
+    audit['monthly_coverage'] = {'valid_month_records': int(valid_month.sum()),
+        'excluded_month_records': int((~valid_month).sum()),
+        'invalid_month_records': int((month.notna() & ~valid_month).sum()),
+        'coverage_pct': round(100 * valid_month.mean(), 2)}
+    result['start_month'] = month.where(valid_month)
+    result['year_month'] = [f'{y:04d}-{int(m):02d}' if pd.notna(m) else None
+                            for y, m in zip(result.year, result.start_month)]
+    audit['partial_year'] = 2026
+    audit['reporting_cutoff'] = '2026-09-15'
+    audit['monthly_coverage']['post_cutoff_start_month_records'] = int(result.year_month.gt('2026-09').sum())
     iso_data = json.loads((ROOT / 'data/geo/iso3166.json').read_text(encoding='utf-8'))['3166-1']
     codes = {item['alpha_3']: item['numeric'] for item in iso_data}
     result['map_id'] = result['iso'].map(codes)
@@ -125,6 +137,7 @@ def run(args):
     (out / 'quality-report.json').write_text(json.dumps(audit, indent=2, ensure_ascii=False), encoding='utf-8')
     for name, keys in [('by-type', ['type']), ('by-country', ['iso', 'country']), ('by-year', ['year']), ('by-country-year-type', ['iso', 'country', 'year', 'type'])]:
         aggregate(df, keys).to_csv(out / f'{name}.csv', index=False)
+    aggregate(df.loc[df.year_month.notna() & df.year_month.le(audit['reporting_cutoff'][:7])], ['year', 'start_month', 'year_month', 'region', 'iso', 'country', 'type']).to_csv(out / 'by-country-month-type.csv', index=False)
     distributions = df[list(IMPACTS.values())].describe(percentiles=[.25, .5, .75, .95, .99]).transpose()
     distributions.to_csv(out / 'impact-distributions.csv', index_label='metric')
     for metric in ['deaths', 'affected', 'damage_adjusted_usd']:

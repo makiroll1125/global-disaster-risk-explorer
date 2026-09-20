@@ -58,6 +58,15 @@
     "Total Damage ('000 US$)": 0,
     "Total Damage, Adjusted ('000 US$)": 0
   },
+  "monthly_coverage": {
+    "valid_month_records": 10823,
+    "excluded_month_records": 73,
+    "invalid_month_records": 0,
+    "coverage_pct": 99.33,
+    "post_cutoff_start_month_records": 1
+  },
+  "partial_year": 2026,
+  "reporting_cutoff": "2026-09-15",
   "unmapped_countries": [
     {
       "iso": "GUM",
