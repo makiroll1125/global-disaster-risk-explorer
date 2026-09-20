@@ -19,8 +19,9 @@ Open **http://127.0.0.1:8000**. Stop the server with Ctrl+C. A local HTTP server
 - Filter by any of the 14 natural-hazard types, region or country/territory.
 - Compare country or hazard rankings and select a bar to filter linked views.
 - Drag the timeline brush handles or use year selectors to zoom the detail chart; switch between yearly and monthly resolution.
-- Play annual map slices with a fixed color scale, without changing the selected range.
-- Explore seasonal record averages, disaster-type composition, and a geographical treemap with country drill-down.
+- Set the map’s own From/To years and play annual slices with a fixed color scale, independently of the historical chart.
+- Explore seasonal record averages, disaster-type composition, and a treemap with local World → Region → Country navigation, breadcrumbs and Back.
+- Open [About the Data](about.html) for verified dataset statistics, real chart previews, interaction plans and the proposed usability study.
 - Inspect reporting coverage, individual records, and download the filtered CSV.
 
 The default scope is **2000–2026, all natural hazards**. **2026 is partial.** Adjusted damage uses **2025 USD**. Unknown impacts remain null; recorded totals are not estimates of future risk.
@@ -62,6 +63,7 @@ For browser integration checks, leave the local server running, install Playwrig
 
 ```powershell
 python tests/browser_check.py
+python tests/ux_check.py
 ```
 
 The browser check detects installed Chrome on macOS/Windows, or uses Playwright Chromium on Linux. Set `CHROME_PATH` to override it. It verifies real-data totals and linked interactions, exports, empty/missing data states, mobile layout and local-only asset loading.
@@ -69,3 +71,5 @@ The browser check detects installed Chrome on macOS/Windows, or uses Playwright 
 ## Sources
 
 Disaster data: [EM-DAT, CRED / UCLouvain](https://public.emdat.be/), export dated 15 September 2026. Definitions: [EM-DAT documentation](https://doc.emdat.be/docs/). Geography: Natural Earth via [World Atlas 2.0.2](https://github.com/topojson/world-atlas). Local libraries and licenses: [vendor notes](vendor/README.md).
+
+See [UX update and verification](docs/ux-update.md) for the independent time states and treemap navigation. Refresh the About page’s genuine chart captures with `python tests/ux_check.py --capture-previews` while the server is running.

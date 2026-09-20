@@ -8,9 +8,9 @@ function empty(svg, width, message) { svg.append('text').attr('class', 'chart-em
 export function renderExtraCharts(ctx) {
   renderSeason(ctx); renderStream(ctx); renderTree(ctx);
 }
-function renderSeason({ rows, state, metadata, showTip, hideTip }) {
-  const selected = filterRows(rows, state);
-  const data = seasonalData(selected, state.start, state.end, metadata.partial_year);
+function renderSeason({ rows, state, historyState, metadata, showTip, hideTip }) {
+  const selected = filterRows(rows, { ...state, ...historyState });
+  const data = seasonalData(selected, historyState.start, historyState.end, metadata.partial_year);
   const svg = d3.select('#seasonal'); svg.selectAll('*').remove();
   const width = widthOf('seasonal'); svg.attr('viewBox', `0 0 ${width} 230`);
   const x = d3.scaleBand().domain(d3.range(1,13)).range([48,width-16]).padding(.25);
@@ -25,10 +25,10 @@ function renderSeason({ rows, state, metadata, showTip, hideTip }) {
   const tip = (e,d)=>showTip(e,monthName(d.month),d.value===null?'Insufficient dated records or no complete years':`${d3.format('.2f')(d.value)} average recorded disasters`,`${data.years.length} selected complete calendar years in denominator; zero means no dated records, not verified absence.`);
   bars.on('focus',tip).on('blur',hideTip); targets.on('pointermove',tip).on('pointerleave',hideTip);
   if (!data.known) empty(svg,width,'No dated records in the selected complete years.');
-  $('season-note').textContent = `Sum of start-month records ÷ ${data.years.length} selected complete calendar years. ${metadata.partial_year} is excluded entirely because reporting is partial. ${data.known.toLocaleString()}/${data.eligible.toLocaleString()} eligible records have valid months; ${data.excluded} excluded. Calendar completeness does not establish reporting completeness. Zero bins mean no dated records; missing dates can understate any month. This view always uses record counts.`;
+  $('season-note').textContent = `Historical range ${historyState.start}–${historyState.end} · Sum of start-month records ÷ ${data.years.length} selected complete calendar years. ${metadata.partial_year} is excluded entirely because reporting is partial. ${data.known.toLocaleString()}/${data.eligible.toLocaleString()} eligible records have valid months; ${data.excluded} excluded. Calendar completeness does not establish reporting completeness. Zero bins mean no dated records; missing dates can understate any month. This view always uses record counts.`;
 }
-function renderStream({ rows, state, defaults, typeColor, showTip, hideTip, accessibleClick, render }) {
-  const context = filterRows(rows,state,{ignoreYears:true,ignoreType:true});
+function renderStream({ rows, state, historyState, defaults, typeColor, showTip, hideTip, accessibleClick, render }) {
+  const context = filterRows(rows,{ ...state, ...historyState },{ignoreYears:true,ignoreType:true});
   const keys = typeColor.domain();
   const years = d3.range(defaults.start,defaults.end+1);
   const counts = d3.rollup(context,v=>v.length,r=>r.year,r=>r.type);
@@ -45,8 +45,8 @@ function renderStream({ rows, state, defaults, typeColor, showTip, hideTip, acce
   const toggle = (_,d)=>{state.type=state.type===d.key?'':d.key;hideTip();render();};
   accessibleClick(layers,toggle); layers.attr('aria-label',d=>`${d.key}: select disaster type`).attr('aria-pressed',d=>d.key===state.type);
   // Translucent masks preserve the full axis and all layers while marking the scope.
-  for (const [a,b] of [[defaults.start-.5,state.start-.5],[state.end+.5,defaults.end+.5]]) svg.append('rect').attr('x',x(a)).attr('y',15).attr('width',Math.max(0,x(b)-x(a))).attr('height',235).attr('fill','#fff').attr('opacity',.64).attr('pointer-events','none');
-  svg.append('rect').attr('class','stream-interval').attr('x',x(state.start-.5)).attr('y',15).attr('width',x(state.end+.5)-x(state.start-.5)).attr('height',235).attr('fill','none').attr('stroke','#228580').attr('pointer-events','none');
+  for (const [a,b] of [[defaults.start-.5,historyState.start-.5],[historyState.end+.5,defaults.end+.5]]) svg.append('rect').attr('x',x(a)).attr('y',15).attr('width',Math.max(0,x(b)-x(a))).attr('height',235).attr('fill','#fff').attr('opacity',.64).attr('pointer-events','none');
+  svg.append('rect').attr('class','stream-interval').attr('x',x(historyState.start-.5)).attr('y',15).attr('width',x(historyState.end+.5)-x(historyState.start-.5)).attr('height',235).attr('fill','none').attr('stroke','#228580').attr('pointer-events','none');
   svg.append('g').attr('class','axis').attr('transform','translate(0,250)').call(d3.axisBottom(x).ticks(Math.max(3,Math.floor(width/85))).tickFormat(d3.format('d')));
   const guide = svg.append('line').attr('class','stream-guide').attr('y1',15).attr('y2',250).attr('visibility','hidden');
   layers.on('pointermove',(event,d)=>{
@@ -58,11 +58,33 @@ function renderStream({ rows, state, defaults, typeColor, showTip, hideTip, acce
   const legend=d3.select('#stream-legend').selectAll('button').data(keys).join('button');
   legend.attr('aria-pressed',d=>d===state.type).on('click',(_,key)=>toggle(null,{key})).on('pointerenter',(_,key)=>emphasize(key)).on('pointerleave',()=>emphasize(null)).on('focus',(_,key)=>emphasize(key)).on('blur',()=>emphasize(null));
   legend.each(function(key){const item=d3.select(this);item.selectAll('*').remove();item.append('i').style('background',typeColor(key));item.append('span').text(key);});
-  $('stream-note').textContent=`${state.start}–${state.end} outlined · Layer thickness represents annual country-disaster records, regardless of the impact measure. Vertical position is a flowing baseline, not an absolute total. Select a layer or legend item to toggle a type.`;
+  $('stream-note').textContent=`${historyState.start}–${historyState.end} outlined · Layer thickness represents annual country-disaster records, regardless of the impact measure. Vertical position is a flowing baseline, not an absolute total. Select a layer or legend item to toggle a type.`;
   if(!context.length) empty(svg,width,'No records for the selected geography.');
 }
-function renderTree({ rows,state,countryNames,showTip,hideTip,accessibleClick,render }) {
-  const selected=filterRows(rows,state);
+function renderTree(ctx) {
+  const { rows, state, historyState, treeState, countryNames, showTip, hideTip, accessibleClick, render } = ctx;
+  const context = filterRows(rows, { ...state, ...historyState });
+  const selected = context.filter(r => (!treeState.region || r.region === treeState.region) && (!treeState.country || r.iso === treeState.country));
+  const navigate = (region = '', country = '') => {
+    treeState.region = region; treeState.country = country;
+    hideTip(); renderTree(ctx);
+    $('tree-breadcrumb').focus({ preventScroll: true });
+  };
+  const trail = [{ label: 'World', region: '', country: '' }];
+  if (treeState.region) trail.push({ label: treeState.region, region: treeState.region, country: '' });
+  if (treeState.country) trail.push({ label: countryNames.get(treeState.country), region: treeState.region, country: treeState.country });
+  const breadcrumb = d3.select('#tree-breadcrumb').attr('tabindex', -1);
+  breadcrumb.selectAll('*').remove();
+  const crumbs = breadcrumb.append('ol').selectAll('li').data(trail).join('li');
+  crumbs.each(function(d, i) {
+    const item = d3.select(this);
+    if (i === trail.length - 1) item.append('span').attr('aria-current', 'location').text(d.label);
+    else item.append('button').text(d.label).on('click', () => navigate(d.region, d.country));
+  });
+  $('tree-back').disabled = !treeState.region;
+  $('tree-world').disabled = !treeState.region;
+  $('tree-back').onclick = () => navigate(treeState.country ? treeState.region : '');
+  $('tree-world').onclick = () => navigate();
   const svg=d3.select('#treemap');
   const width=widthOf('treemap'),height=width<500?540:480;
   svg.attr('viewBox',`0 0 ${width} ${height}`);
@@ -97,20 +119,19 @@ function renderTree({ rows,state,countryNames,showTip,hideTip,accessibleClick,re
   cells.filter(d=>d.depth===3 && d.x1-d.x0>90 && d.y1-d.y0>65).append('text').attr('class','tree-value').attr('x',6).attr('y',45).attr('font-size',24).attr('fill','#173640').text(d=>d.value.toLocaleString());
   const tip=(e,d)=>{
     const name=d.depth===1?d.data.name:d.depth===2?d.data.name:d.data.country;
-    showTip(e,name,`${d.data.region}${d.data.type?' · '+d.data.type:''} · ${d.value.toLocaleString()} country-disaster records`,`${d3.format('.1%')(d.value/d.parent.value)} of ${d.parent.data.name} · ${state.start}–${state.end}`);
+    showTip(e,name,`${d.data.region}${d.data.type?' · '+d.data.type:''} · ${d.value.toLocaleString()} country-disaster records`,`${d3.format('.1%')(d.value/d.parent.value)} of ${d.parent.data.name} · ${historyState.start}–${historyState.end}`);
   };
   cells.on('pointermove',tip).on('pointerleave',hideTip).on('focus',tip).on('blur',hideTip);
   accessibleClick(cells,(e,d)=>{
-    if(d.depth===1)return;
-    if(state.country===d.data.iso && d.depth===3)state.type=state.type===d.data.type?'':d.data.type;
-    else state.country=d.data.iso;
-    hideTip();render();
+    if (d.depth === 1) { navigate(d.data.region); return; }
+    if (treeState.country === d.data.iso && d.depth === 3) {
+      state.type = state.type === d.data.type ? '' : d.data.type;
+      hideTip(); render();
+    } else navigate(d.data.region, d.data.iso);
   });
-  cells.attr('aria-label',d=>`${d.data.name}: ${d.value} records, ${state.start}–${state.end}${d.depth>1?'. Select to explore.':''}`);
-  cells.filter(d=>d.depth===1).attr('tabindex',null).attr('role',null);
-  const legend=d3.select('#tree-legend').selectAll('.region-legend-item').data(regions).join('span').attr('class','region-legend-item');
+  cells.attr('aria-label',d=>`${d.data.name}: ${d.value} records, ${historyState.start}–${historyState.end}${d.depth === 3 && treeState.country ? '. Select to filter linked views by disaster type.' : '. Open in treemap.'}`);
+  const legend=d3.select('#tree-legend').selectAll('.region-legend-item').data(regions).join('button').attr('class','region-legend-item').attr('aria-label', r => `Open ${r} in treemap`).on('click', (_, r) => navigate(r));
   legend.each(function(region){const item=d3.select(this);item.selectAll('*').remove();item.append('i').style('background',regionColor(region));item.append('span').text(region);});
-  $('tree-note').textContent=`World${state.region?' / '+state.region:''}${state.country?' / '+countryNames.get(state.country):''} · ${state.start}–${state.end} · ${selected.length.toLocaleString()} country-disaster records${state.type?' · '+state.type:''}`;
-  $('tree-back').hidden=!state.country&&!state.region;
+  $('tree-note').textContent = `${trail.map(d => d.label).join(' / ')} · Historical range ${historyState.start}–${historyState.end} · ${selected.length.toLocaleString()} country-disaster records · ${state.type || 'all disaster types'}${state.country || state.region ? ` · Global geography: ${countryNames.get(state.country) || state.region}` : ''}. Navigation stays within this chart.`;
   if(!selected.length)empty(svg,width,'No records match these filters.');
 }

@@ -84,15 +84,17 @@ with sync_playwright() as p:
     assert page.locator('.stream-layer').count() == 14
     tree_total = page.locator('.tree-cell[data-depth="3"]').evaluate_all('(nodes) => nodes.reduce((s,n) => s + +n.dataset.value, 0)')
     assert tree_total == len(subset)
-    page.select_option('#aggregation', 'monthly')
+    page.locator('[name="aggregation"][value="monthly"]').check()
     monthly = page.locator('.timeline-dot').evaluate_all('(nodes) => nodes.map(n => n.__data__.value)')
     known = [r for r in subset if r['start_month'] is not None]
     assert len(monthly) == 60 and sum(monthly) == len(known)
     season = page.locator('.season-bar').evaluate_all('(nodes) => nodes.map(n => n.__data__.value)')
     assert season == [sum(r['start_month'] == month for r in known) / 5 for month in range(1, 13)]
 
+    page.select_option('#map-end-year', '2004')
+
     # Map playback changes only the year slice and retains a fixed legend domain.
-    page.select_option('#map-mode', 'timeline')
+    page.locator('[name="map-mode"][value="timeline"]').check()
     page.wait_for_timeout(250)
     fixed_legend = page.locator('#legend .legend-labels').inner_text()
     china2000 = sum(r['iso'] == 'CHN' and r['year'] == 2000 for r in subset)
@@ -109,10 +111,10 @@ with sync_playwright() as p:
     page.wait_for_function('document.querySelector("#map-play").textContent === "Play"')
     assert page.input_value('#start-year') == '2000' and page.input_value('#end-year') == '2004'
     count(page, len(subset))
-    page.select_option('#map-mode', 'period')
+    page.locator('[name="map-mode"][value="period"]').check()
     assert f': {sum(r["iso"] == "CHN" for r in subset)}.' in page.locator('#map [data-iso="CHN"]').get_attribute('aria-label')
 
-    page.select_option('#map-mode', 'timeline')
+    page.locator('[name="map-mode"][value="timeline"]').check()
     page.locator('#map-year').focus()
     page.keyboard.press('Home')
     page.keyboard.press('ArrowRight')
@@ -123,7 +125,7 @@ with sync_playwright() as p:
     paused_year = page.input_value('#map-year')
     page.wait_for_timeout(400)
     assert page.input_value('#map-year') == paused_year
-    page.select_option('#map-mode', 'period')
+    page.locator('[name="map-mode"][value="period"]').check()
     page.locator('#timeline').screenshot(path=str(ARTIFACTS / 'selected-monthly.png'))
 
     # Stream legend and layers synchronize selection; tooltip disappears on leave.
@@ -138,8 +140,9 @@ with sync_playwright() as p:
     china = page.locator('.tree-cell[data-depth="3"][data-iso="CHN"][data-type="Flood"]')
     china.focus()
     page.keyboard.press('Enter')
-    assert page.input_value('#country') == 'CHN'
-    count(page, sum(r['iso'] == 'CHN' for r in subset))
+    assert page.input_value('#country') == ''
+    assert 'China' in page.locator('#tree-breadcrumb').inner_text()
+    count(page, len(subset))
     china.focus()
     page.keyboard.press('Enter')
     assert page.input_value('#type') == ''
@@ -149,7 +152,9 @@ with sync_playwright() as p:
     page.locator('#tree-title').hover()
     assert page.locator('#tooltip').is_hidden()
     page.click('#tree-back')
-    assert page.input_value('#country') == '' and page.input_value('#region') == ''
+    assert page.locator('#tree-breadcrumb [aria-current]').inner_text() == 'Asia'
+    page.click('#tree-world')
+    assert page.input_value('#country') == '' and page.input_value('#region') == 'Asia'
     page.click('#all-years')
     assert page.locator('#timeline').get_attribute('data-end') == '2026'
     page.select_option('#start-year', '2026')
@@ -194,7 +199,8 @@ with sync_playwright() as p:
     assert page.locator('#timeline').get_attribute('data-end') == str(end)
     assert page.locator('.timeline-dot').count() == end - start + 1
 
-    # The unknown current-year damage must not become zero.
+    # The independent map is also set to 2026 to inspect unknown damage.
+    page.select_option('#map-start-year', '2026')
     page.select_option('#metric', 'damage_adjusted_usd')
     page.select_option('#start-year', '2026')
     assert page.locator('.stat-value').nth(3).get_attribute('title') == 'Not reported'

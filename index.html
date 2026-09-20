@@ -15,7 +15,7 @@
   <a class="skip-link" href="#explore">Skip to explorer</a>
   <header class="masthead">
     <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">◎</span> EARTH / IMPACT</a>
-    <nav aria-label="Main navigation"><a class="active" href="#explore">Explorer</a><a href="#about">About the data <span aria-hidden="true">↗</span></a></nav>
+    <nav aria-label="Main navigation"><a class="active" aria-current="page" href="index.html">Explorer</a><a href="about.html">About the data <span aria-hidden="true">↗</span></a></nav>
     <span class="prototype">INTERIM PROTOTYPE</span>
   </header>
   <main id="explore">
@@ -39,18 +39,24 @@
     <section id="stats" class="stats" aria-label="Summary of filtered records"></section>
 
     <div class="main-grid">
-      <section class="panel map-panel" aria-labelledby="map-title">
+      <section class="panel map-panel" id="geography" aria-labelledby="map-title">
         <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear country ×</button></div>
         <p class="panel-subtitle" id="map-subtitle">Country totals · select a country to explore its history</p>
-        <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="Interactive world map of reported disasters"></svg><div class="map-controls"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom">⤢</button></div></div>
-        <div class="playback-controls">
-          <label>Map view <select id="map-mode"><option value="period">Selected period</option><option value="timeline">Animated timeline</option></select></label>
-          <div id="playback" hidden><button id="map-prev" aria-label="Previous year">←</button><button id="map-play">Play</button><button id="map-next" aria-label="Next year">→</button><input id="map-year" type="range" aria-label="Map playback year"><output id="map-current-year"></output><label>Speed <select id="map-speed"><option value="1200">Slow</option><option value="700" selected>Normal</option><option value="350">Fast</option></select></label></div>
+        <div class="map-stage">
+          <div class="map-toolbar">
+            <fieldset class="radio-segment" id="map-mode"><legend class="sr-only">Map view</legend>
+              <label><input type="radio" name="map-mode" value="period" checked><span>Selected period</span></label>
+              <label><input type="radio" name="map-mode" value="timeline"><span>Animated timeline</span></label>
+            </fieldset>
+            <div class="year-controls map-years"><label>From<select id="map-start-year" aria-label="Map start year"></select></label><label>To<select id="map-end-year" aria-label="Map end year"></select></label></div>
+          </div>
+          <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="Interactive world map of reported disasters"></svg><div class="map-controls"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom">⤢</button></div></div>
+          <div id="playback" hidden><div class="playback-buttons"><button id="map-prev" aria-label="Previous year">←</button><button id="map-play">Play</button><button id="map-next" aria-label="Next year">→</button></div><input id="map-year" type="range" aria-label="Map playback year"><output id="map-current-year" aria-label="Current map year"></output><label>Speed <select id="map-speed"><option value="1200">Slow</option><option value="700" selected>Normal</option><option value="350">Fast</option></select></label></div>
         </div>
         <div class="map-footer"><div id="legend"></div><span class="map-hint">Scroll to zoom · drag to pan</span></div>
         <p class="footnote" id="map-coverage"></p>
       </section>
-      <section class="panel ranking-panel" aria-labelledby="rank-title">
+      <section class="panel ranking-panel" id="comparison" aria-labelledby="rank-title">
         <div class="panel-heading"><div><p class="eyebrow">02 / COMPARE IMPACTS</p><h2 id="rank-title">The global picture</h2></div></div>
         <div class="segmented" role="group" aria-label="Rank by"><button id="rank-country" aria-pressed="true">Countries</button><button id="rank-type" aria-pressed="false">Disaster types</button></div>
         <p id="ranking-note" class="panel-subtitle"></p>
@@ -59,10 +65,12 @@
       </section>
     </div>
 
-    <section class="panel timeline-panel" aria-labelledby="timeline-title">
+    <section class="panel timeline-panel" id="history" aria-labelledby="timeline-title">
       <div class="panel-heading"><div><p class="eyebrow">03 / FOLLOW THE TIMELINE</p><h2 id="timeline-title">How does number of disasters change over time?</h2></div>
         <div class="year-controls"><label>From<select id="start-year" aria-label="Start year"></select></label><span> - </span><label>To<select id="end-year" aria-label="End year"></select></label><button id="all-years" class="text-button">All years</button></div></div>
-      <div class="chart-controls"><label>Aggregation <select id="aggregation"><option value="yearly">Yearly</option><option value="monthly">Monthly</option></select></label></div>
+      <div class="chart-controls"><fieldset class="radio-segment" id="aggregation"><legend class="sr-only">Historical aggregation</legend>
+        <label><input type="radio" name="aggregation" value="yearly" checked><span>Yearly</span></label><label><input type="radio" name="aggregation" value="monthly"><span>Monthly</span></label>
+      </fieldset><span>Historical range also applies to summaries, rankings, seasonal patterns and treemap; the map has its own range.</span></div>
       <p id="timeline-note" class="panel-subtitle"></p>
       <svg id="timeline" viewBox="0 0 1300 260" role="img" aria-label="Annual time series"></svg>
       <div class="brush-label"><span>DRAG THE HANDLES TO SELECT A PERIOD</span><strong id="year-range"></strong></div>
@@ -80,9 +88,10 @@
       <div id="stream-legend" class="chart-legend"></div><svg id="streamgraph" role="img" aria-label="Disaster type streamgraph"></svg><p id="stream-note" class="footnote"></p>
     </section>
     <section class="panel extra-panel" aria-labelledby="tree-title">
-      <div class="panel-heading"><div><p class="eyebrow">06 / GEOGRAPHIC DISASTER DISTRIBUTION</p><h2 id="tree-title">Where are disaster records concentrated?</h2></div><button id="tree-back" class="text-button">World overview</button></div>
+      <div class="panel-heading"><div><p class="eyebrow">06 / GEOGRAPHIC DISASTER DISTRIBUTION</p><h2 id="tree-title">Where are disaster records concentrated?</h2></div></div>
+      <div class="tree-navigation"><button id="tree-back" class="quiet-button" disabled>← Back</button><nav id="tree-breadcrumb" aria-label="Treemap location"></nav><button id="tree-world" class="quiet-button" disabled>Reset to World</button></div>
       <p class="panel-subtitle" id="tree-note"></p><div id="tree-legend" class="chart-legend"></div><svg id="treemap" role="img" aria-label="Region, country and disaster type treemap"></svg>
-      <p class="footnote">Rectangle area represents the number of recorded disasters. Colors group countries geographically. Select a country to explore its disaster types. In a selected country, select a disaster type to filter; select it again to clear.</p>
+      <p class="footnote">Rectangle area represents the number of recorded disasters. Colors group countries geographically. Select a region or country to explore inside this chart. Breadcrumbs and Back return to parent levels. Within a country, selecting a disaster type filters the linked views; select it again to clear. Global geography filters still apply when returning to World.</p>
     </section>
     <section class="reading-grid" id="about">
       <div class="reading-card"><p class="eyebrow">READ THE PATTERN</p><h2 id="insight-title">Frequency is only one part of the story.</h2><p id="insight-text">Switch between records, deaths, affected populations and damage to compare different dimensions of disaster impacts.</p></div>
