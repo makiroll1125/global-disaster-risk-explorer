@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#086b70"><title>About the Data — Global Disaster Risk Explorer</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#about-content">Skip to data information</a>
+  <header class="masthead">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">◎</span> EARTH / IMPACT</a>
+    <nav aria-label="Main navigation"><a href="index.html">Explorer</a><a class="active" aria-current="page" href="about.html">About the data <span aria-hidden="true">↗</span></a></nav>
+    <span class="prototype">INTERIM PROTOTYPE</span>
+  </header>
+  <main id="about-content" class="about-page">
+    <section class="intro"><div><p class="eyebrow">GLOBAL DISASTER RISK EXPLORER / PROJECT METHODS</p><h1>About the data.<br><span>Behind the patterns.</span></h1><p class="intro-copy">A university data visualization project by Tobias Garcia and Ha Nguyen. We explore where major natural disasters are recorded, how their reported impacts differ, and how those patterns change over time.</p></div><aside class="intro-note"><strong>Read the evidence. Explore the context.</strong><p>These charts describe recorded impacts, not predicted risk. A high count and a high human or economic impact answer different questions.</p><a href="index.html" class="text-button">Return to the Explorer →</a></aside></section>
+    <nav class="about-contents" aria-label="On this page"><a href="#dataset">Dataset</a><a href="#visualizations">Visualizations</a><a href="#interactions">Interaction and Animation Plan</a><a href="#evaluation">Evaluation Plan</a></nav>
+
+    <section id="dataset" class="panel about-section">
+      <p class="eyebrow">01 / THE EVIDENCE</p><h2>Dataset</h2>
+      <p>We use the supplied <strong>EM-DAT public natural-disaster export</strong> from CRED / UCLouvain, dated <strong>15 September 2026</strong>. The original Excel workbook is retained in <a href="data/raw/">data/raw/</a>; the dashboard loads the cleaned local JSON, with no live data service.</p>
+      <div class="about-stats"><div><strong>10,896</strong><span>country-disaster records</span></div><div><strong>220</strong><span>countries and territories</span></div><div><strong>14</strong><span>natural disaster types</span></div><div><strong>2000–2026</strong><span>start years; 2026 is partial</span></div></div>
+      <div class="about-columns"><div><h3>Raw dataset</h3><p>The XLSX contains 10,896 rows covering start years 2000–2026. Attributes include disaster identifiers, type/subtype, country, ISO code, region, start year/month/day, deaths, affected population and nominal/adjusted damage.</p><p>A row describes a disaster's impact in one country. The same event can appear in several countries: these rows correspond to <strong>9,001 distinct event identifiers</strong>, not 10,896 unique worldwide events.</p></div><div><h3>Processed dataset</h3><p>All 10,896 rows fall within the selected scope and remain in the processed data. The five source regions are Africa, Americas, Asia, Europe and Oceania. We retain the source country and type names; labels may be shortened for display.</p><p><a href="data/processed/disasters.json">disasters.json</a> contains individual records and audit metadata; <a href="data/processed/disasters.csv">disasters.csv</a> provides the same records for tabular analysis.</p></div></div>
+      <div class="table-scroll about-table"><table><caption>Retained fields and derived data</caption><thead><tr><th scope="col">Fields / files</th><th scope="col">Role in this project</th></tr></thead><tbody>
+        <tr><td><code>id, event_id, iso, country, region, map_id</code></td><td>Country-disaster identifier, derived event identifier, source geography and numeric boundary join.</td></tr>
+        <tr><td><code>type, subtype, event_name</code></td><td>Hazard categories and available event descriptions.</td></tr>
+        <tr><td><code>year, start_month, start_day, end_year, year_month</code></td><td>Recorded date precision; normalized <code>YYYY-MM</code> only when a valid start month is known.</td></tr>
+        <tr><td><code>deaths, affected, damage_usd, damage_adjusted_usd</code></td><td>Nullable impacts; damage in dollars, adjusted amounts at 2025 prices.</td></tr>
+        <tr><td><code>by-country.csv, by-type.csv, by-year.csv</code></td><td>Reproducible aggregate outputs with record counts, reported impact sums and coverage.</td></tr>
+        <tr><td><code>by-country-year-type.csv, by-country-month-type.csv</code></td><td>Detailed annual and monthly aggregates. Monthly output includes region and country.</td></tr>
+      </tbody></table></div>
+      <p>The browser filters individual records to build map totals, lines and rankings. It stacks annual type counts for the streamgraph and constructs a World → Region → Country → Disaster Type hierarchy for the treemap. This keeps all views tied to the same counting method.</p>
+      <h3>Data cleaning and preprocessing</h3>
+      <ol class="method-list">
+        <li><strong>Inspect and scope.</strong> Locate the EM-DAT header, trim text, validate required fields and restrict start years to 2000–2026 and all natural hazards. This supplied export needed no scope exclusions.</li>
+        <li><strong>Validate records and geography.</strong> Remove exact duplicates and reject conflicting duplicate identifiers. This export had no duplicates. Uppercase and validate ISO codes, derive event IDs from country-record IDs, and join numeric ISO codes to Natural Earth / World Atlas polygons. Source country/type names are not reclassified.</li>
+        <li><strong>Preserve unknown impacts.</strong> Parse numerical fields; invalid, negative or nonfinite impacts become null. A blank is never converted to zero. Sum only reported values and carry reporting counts alongside each aggregate.</li>
+        <li><strong>Normalize units and dates.</strong> Convert source damage values from thousands of US dollars to dollars; preserve the source's 2025 adjusted-price basis. Validate start months as integers 1–12 and create nullable year-month values. Count a multi-month disaster once in its recorded start month.</li>
+        <li><strong>Export and audit.</strong> Write cleaned JSON/CSV, grouped tables, impact distributions, largest-impact records and a quality report with the original file's SHA-256 checksum.</li>
+      </ol>
+      <p class="source-note">Verified against <a href="scripts/prepare_data.py">prepare_data.py</a>, the supplied workbook, <a href="data/processed/quality-report.json">quality-report.json</a> and the processed records. Reproduction commands and full definitions are in <a href="docs/data-methods.md">Data methods</a> and <a href="scripts/README.md">the preprocessing guide</a>.</p>
+      <div class="data-limitations"><h3>What the numbers cannot tell us</h3><ul>
+        <li><strong>Partial reporting:</strong> 2026 is incomplete; its adjusted damage is unavailable. It should not be compared with complete years as if it were fully observed.</li>
+        <li><strong>Monthly coverage:</strong> 10,823 rows (99.33%) have valid start months; 73 do not. One November 2026 start month lies after the export date. Monthly analysis uses 10,822 records, excluding that row and missing months; annual data retains them. October–December 2026 are unavailable, and September is partial.</li>
+        <li><strong>Seasonal denominator:</strong> month counts are divided by the number of selected years excluding all of 2026. For 2000–2004, each month uses five years. Missing dates may understate any month, and complete calendar years do not guarantee complete reporting.</li>
+        <li><strong>Impact coverage:</strong> 3,070 rows lack deaths, 2,076 lack affected population, and 7,590 lack adjusted damage. Blank means unknown/unreported, not zero; totals are reported sums, not estimates of missing impacts.</li>
+        <li><strong>Geography:</strong> 279 records lack a matching map polygon; they stay in totals and other charts. Counts are not population-adjusted. Major recorded disasters do not represent every hazard occurrence; affected totals can count the same person across events.</li>
+      </ul></div>
+    </section>
+
+    <section id="visualizations" class="panel about-section">
+      <p class="eyebrow">02 / WORKING WITH REAL RECORDS</p><h2>Visualizations</h2><p>Six implemented views answer complementary questions. The three previews below are genuine captures of the working dashboard using the full supplied dataset, all natural hazards and the record-count measure (2000–2026). Open each chart to use its interactive controls.</p>
+      <div class="preview-grid">
+        <figure><a href="index.html#geography"><img src="docs/previews/choropleth.png" alt="Actual choropleth showing country-disaster record counts from 2000 to partial 2026" width="900" height="650"></a><figcaption><strong>World choropleth</strong><br>Country totals → square-root color intensity. Where are more disasters recorded, or greater impacts reported? <a href="index.html#geography">Explore the map →</a></figcaption></figure>
+        <figure><a href="index.html#history"><img src="docs/previews/timeline.png" alt="Actual annual disaster-record history with the full-range overview and selection controls" width="1300" height="460"></a><figcaption><strong>Historical time series</strong><br>Start year/month → horizontal position; counts or reported impact sums → line height. How do frequency and impacts change over time? <a href="index.html#history">Explore the history →</a></figcaption></figure>
+        <figure><a href="index.html#comparison"><img src="docs/previews/ranking.png" alt="Actual top-country ranking by disaster records, led by China and the United States" width="430" height="560"></a><figcaption><strong>Country and disaster-type ranking</strong><br>Grouped period totals → bar length and descending rank. Which places or hazard types lead the selected measure? <a href="index.html#comparison">Compare totals →</a></figcaption></figure>
+      </div>
+      <div class="about-columns three-columns">
+        <article><h3><a href="index.html#stream-title">Disaster-type streamgraph</a></h3><p>Annual record counts by type → colored layer thickness. The full 2000–2026 context remains visible; the historical interval is outlined. How does the mix of recorded disasters change? Vertical position is a flowing baseline, not a total axis.</p></article>
+        <article><h3><a href="index.html#season-title">Seasonal patterns</a></h3><p>Start-month counts divided by selected complete years → January–December bar heights. Which calendar months have higher average recorded frequency for a selected hazard or place?</p></article>
+        <article><h3><a href="index.html#tree-title">Geographical treemap</a></h3><p>Filtered country/type record counts → rectangle area, with region hues and stable country shades. How are records distributed geographically, and which types make up each country's total?</p></article>
+      </div>
+    </section>
+
+    <section id="interactions" class="panel about-section">
+      <p class="eyebrow">03 / EXPLORE AND COMPARE</p><h2>Interaction and Animation Plan</h2><p>The interactions below are implemented. Potential refinements are explicitly marked as planned; they will be prioritized after evaluation.</p>
+      <div class="table-scroll about-table"><table><caption>Current interactions and possible next steps</caption><thead><tr><th scope="col">View</th><th scope="col">Implemented and purpose</th><th scope="col">Planned, not implemented</th></tr></thead><tbody>
+        <tr><th scope="row">Choropleth</th><td>Country tooltips, zoom/pan, shared country selection, local From/To years, visible period/timeline modes, and yearly play/pause, step, slider and speed controls. A fixed playback scale makes changing geographical patterns comparable.</td><td>Evaluate whether playback pacing and controls need refinement. Monthly map animation remains optional.</td></tr>
+        <tr><th scope="row">Historical chart</th><td>Brush and From/To controls zoom the detail line and rescale its axes. Yearly/Monthly radios and date/value tooltips support close temporal comparisons. The annual overview stays complete; map playback is independent.</td><td>Assess whether month-level range endpoints would improve short-period analysis; selection currently uses whole years.</td></tr>
+        <tr><th scope="row">Rankings</th><td>Country/type tabs, click-to-toggle shared filters, impact tooltips, and faded unselected type bars. Lengths and ordering retain comparison context and active selections stay visible.</td><td>Evaluate label comprehension and whether users need more than the top ten countries.</td></tr>
+        <tr><th scope="row">Streamgraph</th><td>Layer and legend hover highlights, date/value tooltip and guide, click-to-toggle disaster types, and historical-range highlighting across the full axis. These support comparisons of composition over time.</td><td>Test understanding of layer thickness and the flowing baseline before considering an optional conventional stacked view.</td></tr>
+        <tr><th scope="row">Seasonal patterns</th><td>Month tooltips explain average frequency and denominator; shared categories and historical years update the bars. This supports seasonal comparisons without confusing averages with totals.</td><td>Test whether the coverage and partial-year explanation needs clearer wording.</td></tr>
+        <tr><th scope="row">Treemap</th><td>Count/share tooltips, local region/country drill-down, clickable breadcrumbs, one-level Back and Reset to World, with layout transitions. Navigation preserves global context; within-country type selection explicitly filters linked views.</td><td>Evaluate discovery of regional navigation and readability of small rectangles and labels.</td></tr>
+      </tbody></table></div>
+      <div class="data-limitations"><h3>Two independent clocks, one set of category filters</h3><p>The map's period and playback year affect only the map. The historical range drives the line, summaries, rankings, seasonal averages and treemap, and highlights an interval in the full-history streamgraph. Changing historical aggregation affects only the line chart. Impact measure, disaster type, region and country remain shared filters.</p><p>Treemap breadcrumbs change only its local location. Reset to World preserves the historical range, measure and all global filters: “World” means the overview within those filters. Clear a global geography filter in the Explorer when you want every region again.</p></div>
+    </section>
+
+    <section id="evaluation" class="panel about-section">
+      <p class="eyebrow">04 / EVALUATING THE EXPERIENCE</p><h2>Evaluation Plan</h2><p><strong>Planned study; no participant results are claimed.</strong> We will recruit approximately 5–10 university students unfamiliar with the application. Each participant will use the working dashboard and the actual supplied dataset in a short, moderated session.</p>
+      <h3>What we will evaluate</h3><p>Can people identify high-count countries, compare disaster types and impacts, recognize historical changes, use the two time controls independently, and navigate World → Region → Country and back? We will also assess color/legend interpretation, the distinction between frequency, human impact and economic damage, readability, responsiveness and navigation clarity.</p>
+      <h3>How we will evaluate it</h3><p>Start each task from a specified filter state. Record independent success before offering help, ask participants to think aloud, and verify their answers against the processed records. Include desktop and a smaller-screen task.</p>
+      <ol class="evaluation-tasks">
+        <li>With Flood selected and no geography filter, find the country with the most records in 2000–2004. Use the ranking and explain what one record represents.</li>
+        <li>Set map playback to 2010–2015 while retaining a 2000–2004 historical range. Start playback and demonstrate that the historical selection stays unchanged.</li>
+        <li>Explore the historical record count for 2000–2004, switch to Monthly, and explain why monthly totals may differ from annual totals.</li>
+        <li>Open Asia and then China in the treemap. Inspect its disaster-type composition; use Back and then Reset to World without changing global filters.</li>
+        <li>Compare Flood and Storm in the streamgraph in 2000 and 2020 using tooltips. Explain the difference between layer thickness, vertical position and impact severity.</li>
+        <li>Switch from record counts to deaths or adjusted damage. Interpret the units and a missing-value indicator, then locate the dataset limitations.</li>
+      </ol>
+      <p>Before sessions, the team will prepare an answer sheet from <code>disasters.json</code> for those exact filters, including ties and missing dates. Task wording may be piloted with one volunteer before the main study.</p>
+      <h3>Feedback and evidence we will collect</h3><div class="about-columns"><div><h4>Task observations</h4><ul><li>Completion rate and time per task.</li><li>Incorrect selections, wrong-chart time changes, navigation errors and assistance requests.</li><li>Accuracy of answers and explanations of colors, areas, units and missing values.</li></ul></div><div><h4>Participant feedback</h4><ul><li>Short 1–5 ratings for ease of filtering, navigation, readability and confidence.</li><li>Which controls or encodings were confusing, and why.</li><li>Open comments and suggestions for improvement.</li></ul></div></div>
+      <p>We will summarize success rates, median completion times and recurring problems, then prioritize changes to labels, controls, visual encodings and navigation before final submission. Automated real-data and browser checks already support correctness testing; they do not replace this planned user study.</p>
+    </section>
+    <p class="about-return"><a class="quiet-button" href="index.html">← Return to the Explorer</a></p>
+  </main>
+  <footer><span>EARTH / IMPACT <span class="footer-divider">/</span> Global Disaster Risk Explorer</span><span>Source: <a href="https://public.emdat.be/">EM-DAT</a> · CRED / UCLouvain · Export 15 Sep 2026<br>Boundaries: Natural Earth / World Atlas · <a href="docs/data-methods.md">Data methods</a></span></footer>
+</body>
+</html>

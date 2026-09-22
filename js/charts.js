@@ -1,3 +1,4 @@
+import { rangeControls } from './controls.js';
 import { filterRows, seasonalData, disasterHierarchy } from './data.js';
 const d3 = window.d3;
 const $ = id => document.getElementById(id);
@@ -8,9 +9,11 @@ function empty(svg, width, message) { svg.append('text').attr('class', 'chart-em
 export function renderExtraCharts(ctx) {
   renderSeason(ctx); renderStream(ctx); renderTree(ctx);
 }
-function renderSeason({ rows, state, metadata, showTip, hideTip }) {
-  const selected = filterRows(rows, state);
-  const data = seasonalData(selected, state.start, state.end, metadata.partial_year);
+function renderSeason(ctx) {
+  const { rows, state, seasonState, defaults, metadata, showTip, hideTip } = ctx;
+  rangeControls('season-range', seasonState, defaults, () => { hideTip(); renderSeason(ctx); });
+  const selected = filterRows(rows, { ...state, ...seasonState });
+  const data = seasonalData(selected, seasonState.start, seasonState.end, metadata.partial_year);
   const svg = d3.select('#seasonal'); svg.selectAll('*').remove();
   const width = widthOf('seasonal'); svg.attr('viewBox', `0 0 ${width} 230`);
   const x = d3.scaleBand().domain(d3.range(1,13)).range([48,width-16]).padding(.25);
@@ -25,10 +28,12 @@ function renderSeason({ rows, state, metadata, showTip, hideTip }) {
   const tip = (e,d)=>showTip(e,monthName(d.month),d.value===null?'Insufficient dated records or no complete years':`${d3.format('.2f')(d.value)} average recorded disasters`,`${data.years.length} selected complete calendar years in denominator; zero means no dated records, not verified absence.`);
   bars.on('focus',tip).on('blur',hideTip); targets.on('pointermove',tip).on('pointerleave',hideTip);
   if (!data.known) empty(svg,width,'No dated records in the selected complete years.');
-  $('season-note').textContent = `Sum of start-month records ÷ ${data.years.length} selected complete calendar years. ${metadata.partial_year} is excluded entirely because reporting is partial. ${data.known.toLocaleString()}/${data.eligible.toLocaleString()} eligible records have valid months; ${data.excluded} excluded. Calendar completeness does not establish reporting completeness. Zero bins mean no dated records; missing dates can understate any month. This view always uses record counts.`;
+  $('season-note').textContent = `Local range ${seasonState.start}–${seasonState.end} · Sum of start-month records ÷ ${data.years.length} selected complete calendar years. ${metadata.partial_year} is excluded entirely because reporting is partial. ${data.known.toLocaleString()}/${data.eligible.toLocaleString()} eligible records have valid months; ${data.excluded} excluded. Calendar completeness does not establish reporting completeness. Zero bins mean no dated records; missing dates can understate any month. This view always uses record counts.`;
 }
-function renderStream({ rows, state, defaults, typeColor, showTip, hideTip, accessibleClick, render }) {
-  const context = filterRows(rows,state,{ignoreYears:true,ignoreType:true});
+function renderStream(ctx) {
+  const { rows, state, streamState, defaults, typeColor, showTip, hideTip, accessibleClick } = ctx;
+  rangeControls('stream-range', streamState, defaults, () => { hideTip(); renderStream(ctx); });
+  const context = filterRows(rows,{ ...state, start: streamState.start, end: streamState.end },{ignoreYears:true});
   const keys = typeColor.domain();
   const years = d3.range(defaults.start,defaults.end+1);
   const counts = d3.rollup(context,v=>v.length,r=>r.year,r=>r.type);
@@ -40,29 +45,52 @@ function renderStream({ rows, state, defaults, typeColor, showTip, hideTip, acce
   const y = d3.scaleLinear().domain([d3.min(stack,l=>d3.min(l,d=>d[0]))||0,d3.max(stack,l=>d3.max(l,d=>d[1]))||1]).range([245,20]);
   const area = d3.area().x(d=>x(d.data.year)).y0(d=>y(d[0])).y1(d=>y(d[1])).curve(d3.curveMonotoneX);
   const layers = svg.selectAll('.stream-layer').data(stack,d=>d.key).join('path').attr('class','stream-layer').attr('data-type',d=>d.key).attr('fill',d=>typeColor(d.key)).attr('d',area);
-  function emphasize(key) { layers.attr('opacity',d=>key ? (d.key===key?1:.22) : (state.type && d.key!==state.type ? .28 : 1)); }
+  function emphasize(key) { layers.attr('opacity',d=>key ? (d.key===key?1:.22) : (streamState.type && d.key!==streamState.type ? .28 : 1)); }
   emphasize(null);
-  const toggle = (_,d)=>{state.type=state.type===d.key?'':d.key;hideTip();render();};
-  accessibleClick(layers,toggle); layers.attr('aria-label',d=>`${d.key}: select disaster type`).attr('aria-pressed',d=>d.key===state.type);
+  const toggle = (_,d)=>{streamState.type=streamState.type===d.key?'':d.key;hideTip();renderStream(ctx);};
+  accessibleClick(layers,toggle); layers.attr('aria-label',d=>`${d.key}: select disaster type`).attr('aria-pressed',d=>d.key===streamState.type);
   // Translucent masks preserve the full axis and all layers while marking the scope.
-  for (const [a,b] of [[defaults.start-.5,state.start-.5],[state.end+.5,defaults.end+.5]]) svg.append('rect').attr('x',x(a)).attr('y',15).attr('width',Math.max(0,x(b)-x(a))).attr('height',235).attr('fill','#fff').attr('opacity',.64).attr('pointer-events','none');
-  svg.append('rect').attr('class','stream-interval').attr('x',x(state.start-.5)).attr('y',15).attr('width',x(state.end+.5)-x(state.start-.5)).attr('height',235).attr('fill','none').attr('stroke','#228580').attr('pointer-events','none');
+  for (const [a,b] of [[defaults.start-.5,streamState.start-.5],[streamState.end+.5,defaults.end+.5]]) svg.append('rect').attr('x',x(a)).attr('y',15).attr('width',Math.max(0,x(b)-x(a))).attr('height',235).attr('fill','#fff').attr('opacity',.64).attr('pointer-events','none');
+  svg.append('rect').attr('class','stream-interval').attr('x',x(streamState.start-.5)).attr('y',15).attr('width',x(streamState.end+.5)-x(streamState.start-.5)).attr('height',235).attr('fill','none').attr('stroke','#228580').attr('pointer-events','none');
   svg.append('g').attr('class','axis').attr('transform','translate(0,250)').call(d3.axisBottom(x).ticks(Math.max(3,Math.floor(width/85))).tickFormat(d3.format('d')));
   const guide = svg.append('line').attr('class','stream-guide').attr('y1',15).attr('y2',250).attr('visibility','hidden');
   layers.on('pointermove',(event,d)=>{
     emphasize(d.key);
     const year=Math.max(defaults.start,Math.min(defaults.end,Math.round(x.invert(d3.pointer(event,svg.node())[0]))));
     guide.attr('x1',x(year)).attr('x2',x(year)).attr('visibility','visible');
-    showTip(event,d.key,`${year}: ${(counts.get(year)?.get(d.key)||0).toLocaleString()} country-disaster records`,year===2026?'Partial year':'Click to toggle the shared disaster-type filter');
+    showTip(event,d.key,`${year}: ${(counts.get(year)?.get(d.key)||0).toLocaleString()} country-disaster records`,year===2026?'Partial year':'Click to toggle the local type highlight');
   }).on('pointerleave',()=>{emphasize(null);guide.attr('visibility','hidden');hideTip();});
   const legend=d3.select('#stream-legend').selectAll('button').data(keys).join('button');
-  legend.attr('aria-pressed',d=>d===state.type).on('click',(_,key)=>toggle(null,{key})).on('pointerenter',(_,key)=>emphasize(key)).on('pointerleave',()=>emphasize(null)).on('focus',(_,key)=>emphasize(key)).on('blur',()=>emphasize(null));
+  legend.attr('aria-pressed',d=>d===streamState.type).on('click',(_,key)=>toggle(null,{key})).on('pointerenter',(_,key)=>emphasize(key)).on('pointerleave',()=>emphasize(null)).on('focus',(_,key)=>emphasize(key)).on('blur',()=>emphasize(null));
   legend.each(function(key){const item=d3.select(this);item.selectAll('*').remove();item.append('i').style('background',typeColor(key));item.append('span').text(key);});
-  $('stream-note').textContent=`${state.start}–${state.end} outlined · Layer thickness represents annual country-disaster records, regardless of the impact measure. Vertical position is a flowing baseline, not an absolute total. Select a layer or legend item to toggle a type.`;
+  $('stream-note').textContent=`${streamState.start}–${streamState.end} outlined · Layer thickness represents annual country-disaster records, regardless of the impact measure. Vertical position is a flowing baseline, not an absolute total. Select a layer or legend item to highlight a type only here.`;
   if(!context.length) empty(svg,width,'No records for the selected geography.');
 }
-function renderTree({ rows,state,countryNames,showTip,hideTip,accessibleClick,render }) {
-  const selected=filterRows(rows,state);
+function renderTree(ctx) {
+  const { rows, state, treeState, defaults, countryNames, showTip, hideTip, accessibleClick } = ctx;
+  rangeControls('tree-range', treeState, defaults, () => { hideTip(); renderTree(ctx); });
+  const context = filterRows(rows, { ...state, start: treeState.start, end: treeState.end });
+  const selected = context.filter(r => (!treeState.region || r.region === treeState.region) && (!treeState.country || r.iso === treeState.country));
+  const navigate = (region = '', country = '') => {
+    treeState.region = region; treeState.country = country;
+    hideTip(); renderTree(ctx);
+    $('tree-breadcrumb').focus({ preventScroll: true });
+  };
+  const trail = [{ label: 'World', region: '', country: '' }];
+  if (treeState.region) trail.push({ label: treeState.region, region: treeState.region, country: '' });
+  if (treeState.country) trail.push({ label: countryNames.get(treeState.country), region: treeState.region, country: treeState.country });
+  const breadcrumb = d3.select('#tree-breadcrumb').attr('tabindex', -1);
+  breadcrumb.selectAll('*').remove();
+  const crumbs = breadcrumb.append('ol').selectAll('li').data(trail).join('li');
+  crumbs.each(function(d, i) {
+    const item = d3.select(this);
+    if (i === trail.length - 1) item.append('span').attr('aria-current', 'location').text(d.label);
+    else item.append('button').text(d.label).on('click', () => navigate(d.region, d.country));
+  });
+  $('tree-back').disabled = !treeState.region;
+  $('tree-world').disabled = !treeState.region;
+  $('tree-back').onclick = () => navigate(treeState.country ? treeState.region : '');
+  $('tree-world').onclick = () => navigate();
   const svg=d3.select('#treemap');
   const width=widthOf('treemap'),height=width<500?540:480;
   svg.attr('viewBox',`0 0 ${width} ${height}`);
@@ -97,20 +125,20 @@ function renderTree({ rows,state,countryNames,showTip,hideTip,accessibleClick,re
   cells.filter(d=>d.depth===3 && d.x1-d.x0>90 && d.y1-d.y0>65).append('text').attr('class','tree-value').attr('x',6).attr('y',45).attr('font-size',24).attr('fill','#173640').text(d=>d.value.toLocaleString());
   const tip=(e,d)=>{
     const name=d.depth===1?d.data.name:d.depth===2?d.data.name:d.data.country;
-    showTip(e,name,`${d.data.region}${d.data.type?' · '+d.data.type:''} · ${d.value.toLocaleString()} country-disaster records`,`${d3.format('.1%')(d.value/d.parent.value)} of ${d.parent.data.name} · ${state.start}–${state.end}`);
+    showTip(e,name,`${d.data.region}${d.data.type?' · '+d.data.type:''} · ${d.value.toLocaleString()} country-disaster records`,`${d3.format('.1%')(d.value/d.parent.value)} of ${d.parent.data.name} · ${treeState.start}–${treeState.end}`);
   };
   cells.on('pointermove',tip).on('pointerleave',hideTip).on('focus',tip).on('blur',hideTip);
   accessibleClick(cells,(e,d)=>{
-    if(d.depth===1)return;
-    if(state.country===d.data.iso && d.depth===3)state.type=state.type===d.data.type?'':d.data.type;
-    else state.country=d.data.iso;
-    hideTip();render();
+    if (d.depth === 1) { navigate(d.data.region); return; }
+    if (treeState.country === d.data.iso && d.depth === 3) {
+      treeState.type = treeState.type === d.data.type ? '' : d.data.type;
+      hideTip(); renderTree(ctx);
+    } else navigate(d.data.region, d.data.iso);
   });
-  cells.attr('aria-label',d=>`${d.data.name}: ${d.value} records, ${state.start}–${state.end}${d.depth>1?'. Select to explore.':''}`);
-  cells.filter(d=>d.depth===1).attr('tabindex',null).attr('role',null);
-  const legend=d3.select('#tree-legend').selectAll('.region-legend-item').data(regions).join('span').attr('class','region-legend-item');
+  cells.attr('opacity', d => d.depth === 3 && treeState.type && d.data.type !== treeState.type ? .3 : 1);
+  cells.attr('aria-label',d=>`${d.data.name}: ${d.value} records, ${treeState.start}–${treeState.end}${d.depth === 3 && treeState.country ? '. Highlight disaster type only in this treemap.' : '. Open in treemap.'}`);
+  const legend=d3.select('#tree-legend').selectAll('.region-legend-item').data(regions).join('button').attr('class','region-legend-item').attr('aria-label', r => `Open ${r} in treemap`).on('click', (_, r) => navigate(r));
   legend.each(function(region){const item=d3.select(this);item.selectAll('*').remove();item.append('i').style('background',regionColor(region));item.append('span').text(region);});
-  $('tree-note').textContent=`World${state.region?' / '+state.region:''}${state.country?' / '+countryNames.get(state.country):''} · ${state.start}–${state.end} · ${selected.length.toLocaleString()} country-disaster records${state.type?' · '+state.type:''}`;
-  $('tree-back').hidden=!state.country&&!state.region;
+  $('tree-note').textContent = `${trail.map(d => d.label).join(' / ')} · Local range ${treeState.start}–${treeState.end} · ${selected.length.toLocaleString()} country-disaster records · ${state.type || 'all disaster types'}${state.country || state.region ? ` · Global geography: ${countryNames.get(state.country) || state.region}` : ''} · Local type highlight: ${treeState.type || 'none'}. Navigation stays within this chart.`;
   if(!selected.length)empty(svg,width,'No records match these filters.');
 }
