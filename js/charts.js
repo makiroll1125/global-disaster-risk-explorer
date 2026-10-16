@@ -1,5 +1,5 @@
 import { rangeControls } from './controls.js';
-import { filterRows, seasonalData, disasterHierarchy } from './data.js';
+import { filterRows, seasonalData, disasterHierarchy, typeLabel } from './data.js';
 const d3 = window.d3;
 const $ = id => document.getElementById(id);
 const monthName = month => d3.utcFormat('%b')(new Date(Date.UTC(2000, month - 1, 1)));
@@ -139,6 +139,6 @@ function renderTree(ctx) {
   cells.attr('aria-label',d=>`${d.data.name}: ${d.value} records, ${treeState.start}–${treeState.end}${d.depth === 3 && treeState.country ? '. Highlight disaster type only in this treemap.' : '. Open in treemap.'}`);
   const legend=d3.select('#tree-legend').selectAll('.region-legend-item').data(regions).join('button').attr('class','region-legend-item').attr('aria-label', r => `Open ${r} in treemap`).on('click', (_, r) => navigate(r));
   legend.each(function(region){const item=d3.select(this);item.selectAll('*').remove();item.append('i').style('background',regionColor(region));item.append('span').text(region);});
-  $('tree-note').textContent = `${trail.map(d => d.label).join(' / ')} · Local range ${treeState.start}–${treeState.end} · ${selected.length.toLocaleString()} country-disaster records · ${state.type || 'all disaster types'}${state.country || state.region ? ` · Global geography: ${countryNames.get(state.country) || state.region}` : ''} · Local type highlight: ${treeState.type || 'none'}. Navigation stays within this chart.`;
+  $('tree-note').textContent = `${trail.map(d => d.label).join(' / ')} · Local range ${treeState.start}–${treeState.end} · ${selected.length.toLocaleString()} country-disaster records · ${typeLabel(state)}${state.country || state.region ? ` · Global geography: ${countryNames.get(state.country) || state.region}` : ''} · Local type highlight: ${treeState.type || 'none'}. Navigation stays within this chart.`;
   if(!selected.length)empty(svg,width,'No records match these filters.');
 }

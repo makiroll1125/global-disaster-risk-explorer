@@ -30,7 +30,7 @@
       <button id="filter-toggle" aria-expanded="false" aria-controls="filter-fields">Global filters</button>
       <div id="filter-fields" class="filter-fields">
       <label>IMPACT MEASURE<select id="metric"><option value="records">Disaster records</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label>
-      <label>DISASTER TYPE<select id="type"><option value="">All natural hazards</option></select></label>
+      <label>DISASTER TYPES<select id="type" multiple aria-label="Disaster types"></select></label>
       <label>REGION<select id="region"><option value="">All regions</option></select></label>
       <label>COUNTRY / TERRITORY<select id="country"><option value="">All countries & territories</option></select></label>
       <button class="reset" id="reset">Reset filters <span aria-hidden="true">↺</span></button>
@@ -45,6 +45,7 @@
       <section class="panel map-panel" id="geography" aria-labelledby="map-title">
         <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear map highlight ×</button></div>
         <p class="panel-subtitle" id="map-subtitle">Country totals · select a country to highlight it in this map</p>
+        <div class="map-encoding"><fieldset class="radio-segment"><legend class="sr-only">Map encoding</legend><label><input type="radio" name="map-encoding" value="events" checked><span>Disaster locations</span></label><label><input type="radio" name="map-encoding" value="choropleth"><span>Country impacts</span></label></fieldset><span id="map-encoding-note">Color identifies disaster type</span></div>
         <div class="map-stage">
           <div class="map-toolbar">
             <fieldset class="radio-segment" id="map-mode"><legend class="sr-only">Map view</legend>
@@ -72,9 +73,10 @@
         <div class="panel-heading"><div><p class="eyebrow">02 / COMPARE IMPACTS</p><h2 id="rank-title">The global picture</h2></div></div>
         <div class="segmented" role="group" aria-label="Rank by"><button id="rank-country" aria-pressed="true">Countries</button><button id="rank-type" aria-pressed="false">Disaster types</button></div>
         <div id="ranking-range" class="year-controls local-range" data-chart="Ranking"></div>
+        <div id="rank-selection" class="rank-selection" hidden><span id="rank-filter-count"></span><button id="rank-all" class="text-button">All</button><button id="rank-none" class="text-button">None</button></div>
       <p id="ranking-note" class="panel-subtitle"></p>
-        <svg id="ranking" viewBox="0 0 430 410" role="img" aria-label="Interactive ranking"></svg>
-        <p class="footnote">Select a bar to highlight it only in this chart. Values show reported totals.</p>
+        <div id="ranking-scroll" class="ranking-scroll" tabindex="0" role="region" aria-label="Scrollable impact ranking"><svg id="ranking" viewBox="0 0 430 410" role="img" aria-label="Interactive ranking"></svg></div>
+        <p class="footnote" id="ranking-instructions">Select a country bar to highlight it only here. Values show reported totals.</p>
       </section>
     </div>
 

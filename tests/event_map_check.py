@@ -18,6 +18,19 @@ def seek(page, date):
     page.locator('#map-day').fill(str(day(date)))
 
 
+def choose(page, identifier, value):
+    page.click('#' + identifier + '-menu-button')
+    page.locator('#' + identifier + '-menu [data-value="' + value + '"]').click()
+
+
+def hazards(page, types):
+    page.click('#type-menu-button')
+    page.locator('#type-menu').get_by_role('button', name='None', exact=True).click()
+    for hazard in types:
+        page.locator('#type-menu [data-value="' + hazard + '"] input').check()
+    page.keyboard.press('Escape')
+
+
 with sync_playwright() as p:
     chrome = os.environ.get('CHROME_PATH') or ('C:/Program Files/Google/Chrome/Application/chrome.exe' if platform.system() == 'Windows' else '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' if platform.system() == 'Darwin' else None)
     browser = p.chromium.launch(**({'executable_path': chrome} if chrome else {}), headless=True)
@@ -35,9 +48,9 @@ with sync_playwright() as p:
     page.locator('#map-approximate').uncheck()
     assert page.locator('.event-pin.approximate').count() == 0
     assert page.locator('.event-pin.located').count() == 1864
-    page.select_option('#type', 'Tsunami')
+    hazards(page, ['Tsunami'])
     assert page.locator('.stat-value').first.get_attribute('title') == '33'
-    page.select_option('#country', 'JPN')
+    choose(page, 'country', 'JPN')
     page.select_option('#map-start-year', '2011')
     page.select_option('#map-end-year', '2011')
     page.locator('[name="map-mode"][value="timeline"]').check()
@@ -100,8 +113,8 @@ with sync_playwright() as p:
     page.click('#map-play')
     assert page.locator('#map-current-date').inner_text() != '15 Sep 2026'
     page.click('#map-play')
-    page.select_option('#country', '')
-    page.select_option('#type', 'Avalanche')
+    choose(page, 'country', '')
+    hazards(page, ['Avalanche'])
     assert page.locator('.stat-value').first.get_attribute('title') == '56'
     # Mobile and narrow-screen expanded layout, including an open color key.
     for width, height in [(390, 844), (320, 740)]:
@@ -118,8 +131,8 @@ with sync_playwright() as p:
     # Reduced-motion users see static starts without animated rings.
     page.set_viewport_size({'width': 1440, 'height': 1000})
     page.emulate_media(reduced_motion='reduce')
-    page.select_option('#country', 'JPN')
-    page.select_option('#type', 'Tsunami')
+    choose(page, 'country', 'JPN')
+    hazards(page, ['Tsunami'])
     page.select_option('#map-start-year', '2011')
     page.select_option('#map-end-year', '2011')
     page.locator('#map-year').fill('2011')

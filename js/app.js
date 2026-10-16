@@ -1,6 +1,6 @@
-import { rangeControls, setupStickyFilters } from './controls.js';
+import { rangeControls, setupStickyFilters, setupFilterMenus } from './controls.js';
 import { renderExtraCharts } from './charts.js';
-import { metrics, summarize, filterRows, groupSummary, timeSeries, validMonth } from './data.js';
+import { metrics, summarize, filterRows, groupSummary, timeSeries, validMonth, typeLabel } from './data.js';
 import { hazardColors, hazardType, DAY } from './hazards.js';
 import { EventMap } from './event-map.js';
 
@@ -13,6 +13,7 @@ let historyState, mapState, treeState, rankingState, seasonState, streamState, t
 const historyFilters = () => ({ ...state, ...historyState });
 let playbackTimer;
 let eventMap;
+let syncFilterMenus = () => {};
 const cutoffDate = () => Date.parse(metadata.reporting_cutoff + 'T00:00:00Z');
 const mapDateBounds = () => [Date.UTC(mapState.start, 0, 1), Math.min(Date.UTC(mapState.end + 1, 0, 1) - DAY, cutoffDate())];
 let typeColor;
@@ -53,7 +54,7 @@ function options(id, items, label = d => d, value = d => d) {
 function setup() {
   rows.forEach(r => { countryNames.set(r.iso, r.country); if (r.map_id) mapToISO.set(r.map_id, r.iso); });
   const [minYear, maxYear] = metadata.observed_years;
-  defaults = { metric: 'records', type: '', region: '', country: '' };
+  defaults = { metric: 'records', types: null, region: '', country: '' };
   timeBounds = { start: minYear, end: maxYear };
   resetLocalStates();
   state = Object.freeze({ ...defaults });
@@ -61,12 +62,16 @@ function setup() {
   typeColor = d3.scaleOrdinal(recordedTypes, recordedTypes.map(type => hazardColors[type])).unknown('#777a99');
   options('type', Object.keys(hazardColors).sort(), type => rows.some(r => r.type === type) ? type : `${type} — no records in source`);
   d3.select('#type').selectAll('option.generated').attr('disabled', type => rows.some(r => r.type === type) ? null : true);
+  for (const option of $('type').options) option.selected = !option.disabled;
   options('region', [...new Set(rows.map(r => r.region))].sort());
   updateCountryOptions();
   const years = d3.range(minYear, maxYear + 1);
   for (const id of ['start-year', 'end-year', 'map-start-year', 'map-end-year']) options(id, years, y => y === 2026 ? '2026*' : y);
   for (const id of ['metric', 'type', 'region', 'country']) $(id).addEventListener('change', () => {
-    state = Object.freeze({ ...state, [id]: $(id).value });
+    if (id === 'type') {
+      const types = [...$('type').selectedOptions].filter(o => !o.disabled).map(o => o.value);
+      state = Object.freeze({ ...state, types: types.length === recordedTypes.length ? null : types });
+    } else state = Object.freeze({ ...state, [id]: $(id).value });
     if (id === 'region') { state = Object.freeze({ ...state, country: '' }); updateCountryOptions(); }
     hideTip(); render();
   });
@@ -84,6 +89,11 @@ function setup() {
   for (const radio of document.querySelectorAll('[name="map-mode"]')) radio.onchange = () => {
     stopPlayback(); mapState.mode = radio.value; renderMap();
   };
+  for (const radio of document.querySelectorAll('[name="map-encoding"]')) radio.onchange = () => {
+    mapState.encoding = radio.value; renderMap();
+  };
+  $('rank-all').onclick = () => selectHazards(null);
+  $('rank-none').onclick = () => selectHazards([]);
   $('map-start-year').onchange = () => {
     stopPlayback(); mapState.start = +$('map-start-year').value; mapState.end = Math.max(mapState.start, mapState.end); renderMap();
   };
@@ -102,6 +112,7 @@ function setup() {
   $('map-expand').onclick = () => setMapExpanded(!$('map-expand').matches('[aria-expanded="true"]'));
   document.querySelector('.hazard-key').addEventListener('toggle', fitExpandedMap);
   document.addEventListener('keydown', event => { if (event.key === 'Escape') setMapExpanded(false); });
+  syncFilterMenus = setupFilterMenus();
   setupStickyFilters(); setupMap(); setupBrush(); render();
   let resizeTimer;
   window.addEventListener('resize', () => {
@@ -111,7 +122,7 @@ function setup() {
 }
 function resetLocalStates() {
   historyState = { ...timeBounds, aggregation: 'yearly' };
-  mapState = { ...timeBounds, year: timeBounds.start, date: Date.UTC(timeBounds.start, 0, 1), mode: 'period', playing: false, speed: 700, country: '', approximate: true };
+  mapState = { ...timeBounds, year: timeBounds.start, date: Date.UTC(timeBounds.start, 0, 1), mode: 'period', encoding: 'events', playing: false, speed: 700, country: '', approximate: true };
   treeState = { ...timeBounds, region: '', country: '', type: '' };
   rankingState = { ...timeBounds, rankBy: 'country', country: '', type: '' };
   seasonState = { ...timeBounds };
@@ -217,6 +228,11 @@ function renderMap() {
   mapState.date = Math.min(mapState.date, mapDateBounds()[1]);
   $('clear-country').hidden = !mapState.country;
   const animated = mapState.mode === 'timeline';
+  const impacts = mapState.encoding === 'choropleth';
+  $('geography').dataset.encoding = mapState.encoding;
+  document.querySelector(`[name="map-encoding"][value="${mapState.encoding}"]`).checked = true;
+  $('map-encoding-note').textContent = impacts ? 'Country color shows the selected impact measure' : 'Color identifies disaster type';
+  $('map').setAttribute('aria-label', impacts ? 'Choropleth of reported country disaster impacts' : 'Disaster locations colored by hazard type on a neutral world map');
   const period = animated ? String(mapState.year) + (mapState.year === metadata.partial_year ? ' · partial year' : '') : `${mapState.start}–${mapState.end}`;
   document.querySelector(`[name="map-mode"][value="${mapState.mode}"]`).checked = true;
   $('map-start-year').value = mapState.start; $('map-end-year').value = mapState.end; $('playback').hidden = !animated;
@@ -237,6 +253,7 @@ function renderMap() {
   countries.interrupt();
   const colored = animated ? countries.transition().duration(motion()) : countries;
   colored.attr('fill', d => {
+    if (!impacts) return '#e5ebe8';
     const s = summaries.get(mapToISO.get(d.id));
     return !s ? '#e7ecec' : s.value === null ? 'url(#unknown-pattern)' : color(s.value);
   });
@@ -253,9 +270,12 @@ function renderMap() {
       s ? `${period}. ${coverage(s)}. Select to highlight in this map.` : 'Absence of records does not establish absence of disasters.');
   };
   countries.on('pointermove', tip).on('focus', tip).on('pointerleave', hideTip).on('blur', hideTip);
-  $('map-title').textContent = state.metric === 'records' ? 'Where are disasters recorded?' : 'Where are reported impacts greatest?';
+  $('map-title').textContent = !impacts || state.metric === 'records' ? 'Where are disasters recorded?' : 'Where are reported impacts greatest?';
   d3.select('#map').attr('data-start', mapState.start).attr('data-end', mapState.end);
-  $('map-subtitle').textContent = `${metrics[state.metric].label} by country · ${period} · map range ${mapState.start}–${mapState.end} · ${animated ? 'single-year values' : 'selected-period totals'}${mapState.country ? ` · Local highlight: ${countryNames.get(mapState.country)}${summaries.has(mapState.country) ? '' : ' (unavailable under current filters)'}` : ''}`;
+  $('map-subtitle').textContent = `${impacts ? metrics[state.metric].label + ' by country' : 'Individual recorded starts · ' + typeLabel(state)} · ${period} · map range ${mapState.start}–${mapState.end}${impacts ? ` · ${animated ? 'full-year values' : 'selected-period totals'}` : ''}${mapState.country ? ` · Local highlight: ${countryNames.get(mapState.country)}${summaries.has(mapState.country) ? '' : ' (unavailable under current filters)'}` : ''}`;
+  document.querySelector('.map-footer').hidden = !impacts;
+  eventMap.layer.attr('display', impacts ? 'none' : null);
+  eventMap.pulses.attr('display', impacts ? 'none' : null);
   const legend = $('legend'); legend.replaceChildren();
   const ramp = document.createElement('div'); ramp.className = 'legend-ramp';
   ramp.style.background = `linear-gradient(90deg, ${d3.range(0, 1.01, .1).map(t => color(t * t * max)).join(',')})`;
@@ -273,7 +293,7 @@ function renderMap() {
   legend.setAttribute('aria-label', 'Country shading: reported impact totals. Event markers use disaster colors.');
   const mapIds = new Set(features.map(f => f.id));
   const unmapped = context.filter(r => !mapIds.has(r.map_id));
-  $('map-coverage').textContent = `${unmapped.length.toLocaleString()} selected records lack map polygons; retained in the other views. ${animated ? 'Country shading shows full-year totals, with a fixed scale across playback years; markers accumulate through the replay date.' : 'Colors rescale with filters.'} Country totals are not adjusted for population.`;
+  $('map-coverage').textContent = impacts ? `${unmapped.length.toLocaleString()} selected records lack map polygons; retained in the other views. ${animated ? 'Country shading shows full-year totals, with a fixed scale across playback years.' : 'Colors rescale with filters.'} Country totals are not adjusted for population.` : 'Countries share a neutral fill. Marker color identifies the disaster type; marker size does not encode impact. Switch to Country impacts for reported totals.';
   fitExpandedMap();
 }
 
@@ -292,20 +312,25 @@ function renderRanking() {
   hideTip();
   rangeControls('ranking-range', rankingState, timeBounds, renderRanking);
   const byCountry = rankingState.rankBy === 'country';
-  const context = filterRows(rows, { ...state, start: rankingState.start, end: rankingState.end });
+  const context = filterRows(rows, { ...state, start: rankingState.start, end: rankingState.end }, { ignoreType: !byCountry });
   const groups = groupSummary(context, byCountry ? 'iso' : 'type', state.metric);
   const ranked = groups.sort((a,b) => (b.value ?? -1) - (a.value ?? -1) || a.key.localeCompare(b.key)).slice(0, byCountry ? 10 : Infinity);
   const svg = d3.select('#ranking'); svg.selectAll('*').remove();
   $('rank-country').setAttribute('aria-pressed', byCountry);
   $('rank-type').setAttribute('aria-pressed', !byCountry);
   $('rank-title').textContent = byCountry ? 'Compare countries' : 'Compare disaster types';
-  svg.attr('viewBox', `0 0 430 ${Math.max(410, ranked.length * 38 + 24)}`);
-  $('ranking-note').textContent = `${byCountry ? 'Top ' : ''}${ranked.length} · ${rankingState.start}–${rankingState.end} · ${metrics[state.metric].unit} · global filters applied · local highlight: ${byCountry ? countryNames.get(rankingState.country) || 'none' : rankingState.type || 'none'}`;
+  const height = Math.max(410, ranked.length * 38 + 24);
+  svg.attr('viewBox', `0 0 430 ${height}`);
+  $('rank-selection').hidden = false;
+  $('rank-selection').style.visibility = byCountry ? 'hidden' : 'visible';
+  $('rank-filter-count').textContent = state.types === null ? 'All hazards selected' : `${state.types.length} selected`;
+  $('ranking-note').textContent = `${byCountry ? 'Top ' : ''}${ranked.length} · ${rankingState.start}–${rankingState.end} · ${metrics[state.metric].unit} · ${byCountry ? 'global filters applied' : 'all types shown for selection; geography filters applied'}`;
+  $('ranking-instructions').textContent = byCountry ? 'Select a country bar to highlight it only here. Values show reported totals.' : 'Select bars to combine hazards across all views. First selection isolates a type; select more to add them. Bar lengths retain the full type context.';
   if (!ranked.length) { svg.append('text').attr('x', 215).attr('y', 150).attr('text-anchor', 'middle').attr('fill', '#60747b').text('No records match these filters.'); return; }
   const x = d3.scaleLinear().domain([0, d3.max(ranked, d => d.value) || 1]).range([0, 300]);
   const groupsSVG = svg.selectAll('.rank-row').data(ranked).join('g').attr('class', 'rank-row').attr('transform', (d,i) => `translate(12,${i * 38 + 16})`);
   groupsSVG.append('rect').attr('width', 405).attr('height', 36).attr('fill', 'transparent');
-  groupsSVG.append('text').attr('y', 11).attr('font-size', 11).attr('fill', '#314b53').text(d => {
+  groupsSVG.append('text').attr('x', byCountry ? 0 : 18).attr('y', 11).attr('font-size', 11).attr('fill', '#314b53').text(d => {
     const name = byCountry ? countryNames.get(d.key) : displayType(d.key);
     return name.length > 39 ? name.slice(0, 37) + '…' : name;
   });
@@ -313,13 +338,31 @@ function renderRanking() {
   groupsSVG.append('rect').attr('class', 'bar').attr('y', 19).attr('height', 8).attr('width', d => d.value === null ? 0 : x(d.value)).attr('rx', 2)
     .attr('fill', d => byCountry ? (d.key === rankingState.country ? '#c07732' : '#228580') : typeColor(d.key));
   groupsSVG.append('text').attr('x', 400).attr('y', 27).attr('text-anchor', 'end').attr('font-size', 12).attr('font-weight', 600).attr('fill', '#173640').text(d => valueLabel(d.value));
-  groupsSVG.classed('muted-type', d => !byCountry && !!rankingState.type && d.key !== rankingState.type)
-    .classed('active-type', d => !byCountry && d.key === rankingState.type);
-  accessibleClick(groupsSVG, (event, d) => { const key = byCountry ? 'country' : 'type'; rankingState[key] = rankingState[key] === d.key ? '' : d.key; hideTip(); renderRanking(); });
-  groupsSVG.attr('aria-label', d => `${byCountry ? countryNames.get(d.key) : displayType(d.key)}: ${valueLabel(d.value)}. ${coverage(d)}. Highlight only in this ranking.`)
-    .attr('aria-pressed', d => d.key === (byCountry ? rankingState.country : rankingState.type));
+  const selected = key => state.types === null || state.types.includes(key);
+  groupsSVG.classed('muted-type', d => !byCountry && !selected(d.key))
+    .classed('active-type', d => !byCountry && selected(d.key));
+  if (!byCountry) {
+    groupsSVG.append('rect').attr('x', 0).attr('y', 1).attr('width', 11).attr('height', 11).attr('rx', 2).attr('fill', d => selected(d.key) ? '#228580' : '#fff').attr('stroke', '#78938d');
+    groupsSVG.filter(d => selected(d.key)).append('text').attr('x', 2).attr('y', 10).attr('font-size', 10).attr('fill', '#fff').text('✓');
+  }
+  accessibleClick(groupsSVG, (event, d) => {
+    if (byCountry) { rankingState.country = rankingState.country === d.key ? '' : d.key; hideTip(); renderRanking(); }
+    else selectHazards(state.types === null ? [d.key] : selected(d.key) ? state.types.filter(type => type !== d.key) : [...state.types, d.key]);
+  });
+  groupsSVG.attr('aria-label', d => `${byCountry ? countryNames.get(d.key) : displayType(d.key)}: ${valueLabel(d.value)}. ${coverage(d)}. ${byCountry ? 'Highlight in this ranking.' : 'Toggle this hazard across all views.'}`)
+    .attr('aria-pressed', d => byCountry ? d.key === rankingState.country : selected(d.key));
   const tip = (event, d) => showTip(event, byCountry ? countryNames.get(d.key) : displayType(d.key), `${full(d.value)} ${metrics[state.metric].unit}`, coverage(d));
   groupsSVG.on('pointermove', tip).on('focus', tip).on('pointerleave', hideTip).on('blur', hideTip);
+}
+
+function selectHazards(types) {
+  const y = scrollY, listY = $('ranking-scroll').scrollTop;
+  const focusedType = document.activeElement?.closest('.rank-row')?.__data__?.key;
+  state = Object.freeze({ ...state, types: types?.length === typeColor.domain().length ? null : types });
+  render();
+  $('ranking-scroll').scrollTop = listY;
+  if (focusedType) d3.selectAll('.rank-row').filter(d => d.key === focusedType).node()?.focus({ preventScroll: true });
+  window.scrollTo({ top: y, behavior: 'instant' });
 }
 
 function annualData() {
@@ -369,7 +412,7 @@ function renderTimeline() {
   const dated = context.filter(validMonth);
   const future = dated.filter(r => new Date(Date.UTC(r.year, r.start_month - 1, 1)) > cutoff).length;
   const known = dated.length - future;
-  $('timeline-note').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} · ${state.type ? displayType(state.type) : 'all natural hazards'} · ${historyState.start}–${historyState.end} · ${monthly ? 'monthly' : 'annual'} ${metrics[state.metric].label.toLowerCase()} by start date${monthly ? ` · ${known.toLocaleString()}/${context.length.toLocaleString()} records have a valid month; ${context.length-dated.length} missing months and ${future} post-export dates excluded. Months after 15 Sep 2026 are unavailable; September and 2026 are partial.` : ''}`;
+  $('timeline-note').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} · ${typeLabel(state)} · ${historyState.start}–${historyState.end} · ${monthly ? 'monthly' : 'annual'} ${metrics[state.metric].label.toLowerCase()} by start date${monthly ? ` · ${known.toLocaleString()}/${context.length.toLocaleString()} records have a valid month; ${context.length-dated.length} missing months and ${future} post-export dates excluded. Months after 15 Sep 2026 are unavailable; September and 2026 are partial.` : ''}`;
   const miniY = d3.scaleLinear().domain([0, d3.max(annual, d => d.value) || 1]).range([49, 7]);
   d3.select('#brush .mini-line').datum(annual).attr('d', d3.line().defined(d => d.value !== null).x(d => brushScale(d.year)).y(d => miniY(d.value)));
   if (!brushing) {
@@ -428,10 +471,12 @@ function downloadCSV() {
 }
 function render() {
   hideTip();
-  for (const id of ['metric', 'type', 'region', 'country']) $(id).value = state[id];
-  $('filter-toggle').textContent = `Global filters · ${['type', 'region', 'country'].filter(k => state[k]).length + (state.metric !== 'records' ? 1 : 0)} active`;
+  for (const id of ['metric', 'region', 'country']) $(id).value = state[id];
+  for (const option of $('type').options) option.selected = !option.disabled && (state.types === null || state.types.includes(option.value));
+  syncFilterMenus();
+  $('filter-toggle').textContent = `Global filters · ${['region', 'country'].filter(k => state[k]).length + (state.types !== null ? 1 : 0) + (state.metric !== 'records' ? 1 : 0)} active`;
   const selected = filterRows(rows, { ...state, ...timeBounds });
-  $('scope').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} / ${state.type ? displayType(state.type) : `All ${new Set(rows.map(r => r.type)).size} natural hazards`} / Global scope · all years ${timeBounds.start}–${timeBounds.end} · ${selected.length.toLocaleString()} records`;
+  $('scope').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} / ${typeLabel(state)} / Global scope · all years ${timeBounds.start}–${timeBounds.end} · ${selected.length.toLocaleString()} records`;
   renderStats(selected); renderMap(); renderRanking(); renderTimeline(); renderInsight(selected); renderTable(selected);
   renderExtraCharts({ rows, state, seasonState, streamState, treeState, defaults: timeBounds, metadata, typeColor, showTip, hideTip, accessibleClick, countryNames });
   document.body.dataset.ready = 'true';
