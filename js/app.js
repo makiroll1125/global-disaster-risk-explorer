@@ -1,6 +1,8 @@
 import { rangeControls, setupStickyFilters } from './controls.js';
 import { renderExtraCharts } from './charts.js';
 import { metrics, summarize, filterRows, groupSummary, timeSeries, validMonth } from './data.js';
+import { hazardColors, hazardType, DAY } from './hazards.js';
+import { EventMap } from './event-map.js';
 
 const $ = id => document.getElementById(id);
 const d3 = window.d3;
@@ -10,6 +12,9 @@ let rows, metadata, features, state, defaults, projection, geoPath, mapLayer, co
 let historyState, mapState, treeState, rankingState, seasonState, streamState, timeBounds;
 const historyFilters = () => ({ ...state, ...historyState });
 let playbackTimer;
+let eventMap;
+const cutoffDate = () => Date.parse(metadata.reporting_cutoff + 'T00:00:00Z');
+const mapDateBounds = () => [Date.UTC(mapState.start, 0, 1), Math.min(Date.UTC(mapState.end + 1, 0, 1) - DAY, cutoffDate())];
 let typeColor;
 const motion = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220;
 let brush, brushGroup, brushScale, syncing = false;
@@ -52,8 +57,10 @@ function setup() {
   timeBounds = { start: minYear, end: maxYear };
   resetLocalStates();
   state = Object.freeze({ ...defaults });
-  typeColor = d3.scaleOrdinal([...new Set(rows.map(r => r.type))].sort(), ['#228580','#577fac','#b47736','#926694','#79913e','#ba6563','#638c93','#a58a5a','#676bb0','#c088a1','#43664c','#8d6950','#596e7d','#acaa48']);
-  options('type', [...new Set(rows.map(r => r.type))].sort(), displayType);
+  const recordedTypes = [...new Set(rows.map(r => r.type))].sort();
+  typeColor = d3.scaleOrdinal(recordedTypes, recordedTypes.map(type => hazardColors[type])).unknown('#777a99');
+  options('type', Object.keys(hazardColors).sort(), type => rows.some(r => r.type === type) ? type : `${type} — no records in source`);
+  d3.select('#type').selectAll('option.generated').attr('disabled', type => rows.some(r => r.type === type) ? null : true);
   options('region', [...new Set(rows.map(r => r.region))].sort());
   updateCountryOptions();
   const years = d3.range(minYear, maxYear + 1);
@@ -78,28 +85,33 @@ function setup() {
     stopPlayback(); mapState.mode = radio.value; renderMap();
   };
   $('map-start-year').onchange = () => {
-    mapState.start = +$('map-start-year').value; mapState.end = Math.max(mapState.start, mapState.end); renderMap();
+    stopPlayback(); mapState.start = +$('map-start-year').value; mapState.end = Math.max(mapState.start, mapState.end); renderMap();
   };
   $('map-end-year').onchange = () => {
-    mapState.end = +$('map-end-year').value; mapState.start = Math.min(mapState.start, mapState.end); renderMap();
+    stopPlayback(); mapState.end = +$('map-end-year').value; mapState.start = Math.min(mapState.start, mapState.end); renderMap();
   };
-  $('map-year').oninput = () => { stopPlayback(); mapState.year = +$('map-year').value; renderMap(); };
+  $('map-year').oninput = () => { stopPlayback(); mapState.year = +$('map-year').value; mapState.date = Date.UTC(mapState.year, 0, 1); renderMap(); };
+  $('map-day').oninput = () => seekDate(+$('map-day').value * DAY);
+  $('map-approximate').onchange = () => { mapState.approximate = $('map-approximate').checked; eventMap.clearPulses(); eventMap.render(); };
   for (const [id, step] of [['map-prev', -1], ['map-next', 1]]) $(id).onclick = () => {
-    stopPlayback(); mapState.year = Math.max(mapState.start, Math.min(mapState.end, mapState.year + step)); renderMap();
+    seekDate(mapState.date + step * DAY);
   };
   $('map-speed').onchange = () => { mapState.speed = +$('map-speed').value; if (mapState.playing) { stopPlayback(); startPlayback(); } };
   $('map-play').onclick = () => { if (mapState.playing) { stopPlayback(); renderMap(); } else startPlayback(); };
   document.addEventListener('visibilitychange', () => { if (document.hidden) { stopPlayback(); renderMap(); } });
+  $('map-expand').onclick = () => setMapExpanded(!$('map-expand').matches('[aria-expanded="true"]'));
+  document.querySelector('.hazard-key').addEventListener('toggle', fitExpandedMap);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') setMapExpanded(false); });
   setupStickyFilters(); setupMap(); setupBrush(); render();
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { setupBrush(); render(); }, 120);
+    resizeTimer = setTimeout(() => { setupBrush(); render(); fitExpandedMap(); }, 120);
   });
 }
 function resetLocalStates() {
   historyState = { ...timeBounds, aggregation: 'yearly' };
-  mapState = { ...timeBounds, year: timeBounds.start, mode: 'period', playing: false, speed: 700, country: '' };
+  mapState = { ...timeBounds, year: timeBounds.start, date: Date.UTC(timeBounds.start, 0, 1), mode: 'period', playing: false, speed: 700, country: '', approximate: true };
   treeState = { ...timeBounds, region: '', country: '', type: '' };
   rankingState = { ...timeBounds, rankBy: 'country', country: '', type: '' };
   seasonState = { ...timeBounds };
@@ -125,7 +137,8 @@ function setupMap() {
     if (state.region && !rows.some(r => r.iso === iso && r.region === state.region)) return;
     mapState.country = mapState.country === iso ? '' : iso; hideTip(); renderMap();
   });
-  zoom = d3.zoom().scaleExtent([1, 6]).translateExtent([[0, 0], [900, 435]]).extent([[0,0],[900,435]]).on('zoom', event => { mapLayer.attr('transform', event.transform); hideTip(); });
+  eventMap = new EventMap({ svg, projection, features, showTip, hideTip, onDate: seekDate });
+  zoom = d3.zoom().scaleExtent([1, 6]).translateExtent([[0, 0], [900, 435]]).extent([[0,0],[900,435]]).on('zoom', event => { mapLayer.attr('transform', event.transform); if (eventMap.state) eventMap.zoom(event.transform); hideTip(); });
   svg.call(zoom).on('dblclick.zoom', null);
   $('zoom-in').onclick = () => svg.call(zoom.scaleBy, 1.4);
   $('zoom-out').onclick = () => svg.call(zoom.scaleBy, 1 / 1.4);
@@ -133,21 +146,75 @@ function setupMap() {
 }
 function resetZoom() { d3.select('#map').call(zoom.transform, d3.zoomIdentity); }
 
+function setMapExpanded(expanded) {
+  const button = $('map-expand');
+  if ((button.getAttribute('aria-expanded') === 'true') === expanded) return;
+  document.querySelector('.main-grid').classList.toggle('map-expanded', expanded);
+  document.body.classList.toggle('map-is-expanded', expanded);
+  document.documentElement.classList.toggle('map-is-expanded', expanded);
+  button.setAttribute('aria-expanded', expanded);
+  button.setAttribute('aria-label', expanded ? 'Restore map size' : 'Expand map');
+  button.textContent = expanded ? '↙' : '⛶';
+  eventMap.clearPulses();
+  if (!expanded) $('map').style.removeProperty('height');
+  requestAnimationFrame(() => { fitExpandedMap(); eventMap.render(); if (expanded) $('geography').scrollIntoView({ block: 'start' }); else button.focus({ preventScroll: true }); });
+}
+
+function fitExpandedMap() {
+  if ($('map-expand').getAttribute('aria-expanded') !== 'true') return;
+  const map = $('map');
+  const otherHeight = $('geography').getBoundingClientRect().height - map.getBoundingClientRect().height;
+  map.style.height = Math.max(180, innerHeight - 24 - otherHeight) + 'px';
+  if (eventMap.state) eventMap.render();
+}
+
+function updatePlaybackControls() {
+  const [min, max] = mapDateBounds();
+  const yearMin = Date.UTC(mapState.year, 0, 1);
+  const yearMax = Math.min(Date.UTC(mapState.year + 1, 0, 1) - DAY, max);
+  $('map-day').min = yearMin / DAY; $('map-day').max = yearMax / DAY; $('map-day').value = mapState.date / DAY;
+  $('map-current-date').textContent = d3.utcFormat('%d %b %Y')(mapState.date);
+  $('map-day').setAttribute('aria-valuetext', $('map-current-date').textContent);
+  $('map-year').value = mapState.year; $('map-current-year').textContent = mapState.year;
+  $('map-prev').disabled = mapState.date <= min; $('map-next').disabled = mapState.date >= max;
+  $('map-play').textContent = mapState.playing ? 'Pause' : 'Play';
+  $('map-play').setAttribute('aria-pressed', mapState.playing);
+}
+
+function seekDate(date) {
+  stopPlayback();
+  const [min, max] = mapDateBounds();
+  const previous = mapState.date;
+  mapState.date = Math.max(min, Math.min(max, date));
+  const year = new Date(mapState.date).getUTCFullYear();
+  if (year !== mapState.year) { mapState.year = year; renderMap(); eventMap.render(mapState.date - DAY); }
+  else { eventMap.clearPulses(); eventMap.render(previous < mapState.date ? mapState.date - DAY : null); updatePlaybackControls(); }
+}
+
 function stopPlayback() { clearTimeout(playbackTimer); mapState.playing = false; }
 function startPlayback() {
-  if (mapState.year >= mapState.end) mapState.year = mapState.start;
+  const [min, max] = mapDateBounds();
+  if (mapState.date >= max) mapState.date = min;
+  mapState.year = new Date(mapState.date).getUTCFullYear();
   mapState.playing = true; renderMap();
+  eventMap.render(mapState.date - DAY);
   const tick = () => {
     if (!mapState.playing) return;
-    if (mapState.year >= mapState.end) { stopPlayback(); renderMap(); return; }
-    mapState.year++; renderMap();
-    playbackTimer = setTimeout(tick, mapState.speed);
+    if (mapState.date >= max) { stopPlayback(); updatePlaybackControls(); return; }
+    const previous = mapState.date;
+    mapState.date = Math.min(max, mapState.date + DAY);
+    const year = new Date(mapState.date).getUTCFullYear();
+    if (year !== mapState.year) { mapState.year = year; renderMap(); }
+    eventMap.render(previous); updatePlaybackControls();
+    playbackTimer = setTimeout(tick, mapState.speed / 7);
   };
-  playbackTimer = setTimeout(tick, mapState.speed);
+  playbackTimer = setTimeout(tick, mapState.speed / 7);
 }
 function renderMap() {
   if (tooltip.dataset.owner === 'map') hideTip();
   mapState.year = Math.max(mapState.start, Math.min(mapState.end, mapState.year));
+  if (new Date(mapState.date).getUTCFullYear() !== mapState.year) mapState.date = Date.UTC(mapState.year, 0, 1);
+  mapState.date = Math.min(mapState.date, mapDateBounds()[1]);
   $('clear-country').hidden = !mapState.country;
   const animated = mapState.mode === 'timeline';
   const period = animated ? String(mapState.year) + (mapState.year === metadata.partial_year ? ' · partial year' : '') : `${mapState.start}–${mapState.end}`;
@@ -158,8 +225,11 @@ function renderMap() {
   $('map-play').textContent = mapState.playing ? 'Pause' : 'Play';
   $('map-play').setAttribute('aria-pressed', mapState.playing);
   $('map-prev').disabled = mapState.year <= mapState.start; $('map-next').disabled = mapState.year >= mapState.end;
+  updatePlaybackControls();
   const rangeContext = filterRows(rows, { ...state, start: mapState.start, end: mapState.end });
   const context = animated ? rangeContext.filter(r => r.year === mapState.year) : rangeContext;
+  eventMap.setData(rangeContext, mapState, cutoffDate());
+  $('event-replay').hidden = !animated;
   const summaries = new Map(groupSummary(context, 'iso', state.metric).map(d => [d.key, d]));
   // Compare annual country totals using one domain over the entire playback range.
   const max = (animated ? d3.max(d3.groups(rangeContext, r => r.year, r => r.iso).flatMap(([, groups]) => groups.map(([, records]) => summarize(records, state.metric).value))) : d3.max([...summaries.values()], d => d.value)) || 1;
@@ -190,7 +260,7 @@ function renderMap() {
   const ramp = document.createElement('div'); ramp.className = 'legend-ramp';
   ramp.style.background = `linear-gradient(90deg, ${d3.range(0, 1.01, .1).map(t => color(t * t * max)).join(',')})`;
   const labels = document.createElement('div'); labels.className = 'legend-labels';
-  for (const v of [0, max / 4, max]) { const span = document.createElement('span'); span.textContent = valueLabel(v); labels.append(span); }
+  for (const v of [...new Set([0, state.metric === 'records' ? Math.round(max / 4) : max / 4, max])]) { const span = document.createElement('span'); span.textContent = valueLabel(v); labels.append(span); }
   const extra = document.createElement('div'); extra.className = 'legend-extra';
   extra.innerHTML = '<span><i class="swatch"></i>No records</span><span><i class="swatch unknown"></i>Unreported</span><span>Square-root scale</span>';
   if ([...summaries.values()].some(s => s.value !== null)) {
@@ -200,9 +270,11 @@ function renderMap() {
     empty.textContent = context.length ? 'No reported values for the selected measure' : 'No records match these filters';
     legend.append(empty, extra);
   }
+  legend.setAttribute('aria-label', 'Country shading: reported impact totals. Event markers use disaster colors.');
   const mapIds = new Set(features.map(f => f.id));
   const unmapped = context.filter(r => !mapIds.has(r.map_id));
-  $('map-coverage').textContent = `${unmapped.length.toLocaleString()} selected records lack map polygons; retained in the other views. ${animated ? 'Color scale fixed across playback years.' : 'Colors rescale with filters.'} Country totals are not adjusted for population.`;
+  $('map-coverage').textContent = `${unmapped.length.toLocaleString()} selected records lack map polygons; retained in the other views. ${animated ? 'Country shading shows full-year totals, with a fixed scale across playback years; markers accumulate through the replay date.' : 'Colors rescale with filters.'} Country totals are not adjusted for population.`;
+  fitExpandedMap();
 }
 
 function renderStats(selected) {
@@ -349,7 +421,7 @@ function renderTable(selected) {
 }
 function downloadCSV() {
   const selected = filterRows(rows, { ...state, ...timeBounds });
-  const fields = ['id', 'year', 'start_month', 'year_month', 'iso', 'country', 'region', 'type', 'deaths', 'affected', 'damage_adjusted_usd'];
+  const fields = ['id', 'year', 'start_month', 'start_day', 'year_month', 'iso', 'country', 'region', 'source_type', 'subtype', 'type', 'location', 'latitude', 'longitude', 'deaths', 'affected', 'damage_adjusted_usd'];
   const url = URL.createObjectURL(new Blob([d3.csvFormat(selected, fields)], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a'); a.href = url; a.download = `emdat-filtered-${timeBounds.start}-${timeBounds.end}.csv`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -359,7 +431,7 @@ function render() {
   for (const id of ['metric', 'type', 'region', 'country']) $(id).value = state[id];
   $('filter-toggle').textContent = `Global filters · ${['type', 'region', 'country'].filter(k => state[k]).length + (state.metric !== 'records' ? 1 : 0)} active`;
   const selected = filterRows(rows, { ...state, ...timeBounds });
-  $('scope').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} / ${state.type ? displayType(state.type) : 'All 14 natural hazards'} / Global scope · all years ${timeBounds.start}–${timeBounds.end} · ${selected.length.toLocaleString()} records`;
+  $('scope').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} / ${state.type ? displayType(state.type) : `All ${new Set(rows.map(r => r.type)).size} natural hazards`} / Global scope · all years ${timeBounds.start}–${timeBounds.end} · ${selected.length.toLocaleString()} records`;
   renderStats(selected); renderMap(); renderRanking(); renderTimeline(); renderInsight(selected); renderTable(selected);
   renderExtraCharts({ rows, state, seasonState, streamState, treeState, defaults: timeBounds, metadata, typeColor, showTip, hideTip, accessibleClick, countryNames });
   document.body.dataset.ready = 'true';
@@ -368,7 +440,7 @@ function render() {
 try {
   if (!d3 || !window.topojson) throw new Error('Local D3 or TopoJSON library could not be loaded.');
   const [dataset, world] = await Promise.all([d3.json('data/processed/disasters.json'), d3.json('data/geo/countries-110m.json')]);
-  rows = dataset.records; metadata = dataset.metadata;
+  rows = dataset.records.map(row => ({ ...row, source_type: row.type, type: hazardType(row) })); metadata = dataset.metadata;
   if (!rows?.length) throw new Error('No processed disaster records found.');
   features = window.topojson.feature(world, world.objects.countries).features.filter(f => f.properties.name !== 'Antarctica');
   setup();

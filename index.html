@@ -53,10 +53,19 @@
             </fieldset>
             <div class="year-controls map-years"><label>From<select id="map-start-year" aria-label="Map start year"></select></label><label>To<select id="map-end-year" aria-label="Map end year"></select></label></div>
           </div>
-          <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="Interactive world map of reported disasters"></svg><div class="map-controls"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom">⤢</button></div></div>
-          <div id="playback" hidden><div class="playback-buttons"><button id="map-prev" aria-label="Previous year">←</button><button id="map-play">Play</button><button id="map-next" aria-label="Next year">→</button></div><input id="map-year" type="range" aria-label="Map playback year"><output id="map-current-year" aria-label="Current map year"></output><label>Speed <select id="map-speed"><option value="1200">Slow</option><option value="700" selected>Normal</option><option value="350">Fast</option></select></label></div>
+          <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="World map with country impact totals and disaster start locations"></svg><div class="map-controls"><button id="map-expand" aria-label="Expand map" aria-expanded="false" aria-controls="geography comparison" title="Expand map · Escape to restore">⛶</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom" title="Reset zoom">↺</button></div></div>
+          <div id="event-replay" hidden>
+            <div class="event-clock"><strong id="map-current-date"></strong><span>RECORDED STARTS / DAILY</span></div>
+            <svg id="event-timeline" viewBox="0 0 900 70" preserveAspectRatio="none" role="img" aria-label="Disaster starts by day, colored by type. Use the daily slider below to select a date."></svg>
+            <input id="map-day" type="range" step="1" aria-label="Map playback date">
+          </div>
+          <div id="playback" hidden><div class="playback-buttons"><button id="map-prev" aria-label="Previous day">←</button><button id="map-play">Play</button><button id="map-next" aria-label="Next day">→</button></div><label class="playback-year-label" for="map-year">Year</label><input id="map-year" type="range" aria-label="Map playback year"><output id="map-current-year" aria-label="Current map year"></output><label>Speed <select id="map-speed"><option value="1200">Slow</option><option value="700" selected>Normal</option><option value="350">Fast</option></select></label></div>
+          <div class="event-status"><span id="event-count"></span><label><input id="map-approximate" type="checkbox" checked> Include country reference points</label></div>
+          <p id="event-today" class="event-today"></p>
         </div>
         <div class="map-footer"><div id="legend"></div><span class="map-hint">Scroll to zoom · drag to pan</span></div>
+        <details class="hazard-key"><summary>Disaster colors <span>Filled = source coordinate · hollow = country reference</span></summary><div id="hazard-legend"></div><p>Hurricane / typhoon includes all tropical cyclones. Sinkhole and firestorm have no explicitly classified records in this export; subsidence and wildfire retain their source classifications.</p></details>
+        <p class="footnote" id="event-coverage"></p>
         <p class="footnote" id="map-coverage"></p>
       </section>
       <section class="panel ranking-panel" id="comparison" aria-labelledby="rank-title">

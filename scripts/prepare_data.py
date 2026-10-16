@@ -64,6 +64,15 @@ def clean(frame, start, end, all_natural=False):
     result['year'] = years.loc[scope].astype(int)
     result['subtype'] = df.get('Disaster Subtype', pd.Series(index=df.index, dtype=object))
     result['event_name'] = df.get('Event Name', pd.Series(index=df.index, dtype=object))
+    result['location'] = df.get('Location', pd.Series(index=df.index, dtype=object))
+    # Preserve source coordinates; missing/out-of-range pairs never become (0, 0).
+    for source, target, limit in [('Latitude', 'latitude', 90), ('Longitude', 'longitude', 180)]:
+        values = pd.to_numeric(df.get(source, pd.Series(index=df.index, dtype=float)), errors='coerce')
+        result[target] = values.where(values.between(-limit, limit))
+    valid_coordinates = result.latitude.notna() & result.longitude.notna()
+    result.loc[~valid_coordinates, ['latitude', 'longitude']] = float('nan')
+    audit['coordinate_coverage'] = {'located_records': int(valid_coordinates.sum()),
+                                    'missing_records': int((~valid_coordinates).sum())}
     audit['invalid_numeric_values'] = {}
     for source, target in IMPACTS.items():
         original = df[source].replace(r'^\s*$', pd.NA, regex=True)

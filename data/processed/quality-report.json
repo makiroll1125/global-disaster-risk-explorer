@@ -52,6 +52,10 @@
   "exact_duplicates_removed": 0,
   "invalid_start_year_rows": 0,
   "excluded_rows": 0,
+  "coordinate_coverage": {
+    "located_records": 1864,
+    "missing_records": 9032
+  },
   "invalid_numeric_values": {
     "Total Deaths": 0,
     "Total Affected": 0,

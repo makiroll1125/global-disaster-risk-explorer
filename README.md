@@ -16,10 +16,12 @@ Open **http://127.0.0.1:8000**. Stop the server with Ctrl+C. A local HTTP server
 
 - Compare country totals on the interactive world map; zoom, pan, or select a country.
 - Switch between records, reported deaths, affected populations and adjusted damage.
-- Filter by any of the 14 natural-hazard types, region or country/territory.
+- Filter by 34 hazard categories derived from the source types and subtypes, including tsunami, avalanche, hurricane/typhoon, tornado, heatwave, blizzard, hailstorm and duststorm.
 - Compare country or hazard rankings and select a bar to filter linked views.
 - Drag the timeline brush handles or use year selectors to zoom the detail chart; switch between yearly and monthly resolution.
-- Set the map’s own From/To years and play annual slices with a fixed color scale, independently of the historical chart.
+- Set the map’s From/To years, select **Animated timeline**, then **Play** to replay daily recorded starts. Pins and one-second expanding rings share each hazard’s color with the daily event timeline and type rankings. Country shading shows full-year totals on a fixed scale.
+- Scrub the daily timeline, step by day, or jump to a year. Filled pins use source coordinates; optional hollow pins use approximate country reference points. Open **Disaster colors** for the key and counts.
+- Use **Expand map** above the zoom controls to fill the viewport and move Compare Impacts below it; press Escape to restore the layout.
 - Explore seasonal record averages, disaster-type composition, and a treemap with local World → Region → Country navigation, breadcrumbs and Back.
 - Open [About the Data](about.html) for verified dataset statistics, real chart previews, interaction plans and the proposed usability study.
 - Inspect reporting coverage, individual records, and download the filtered CSV.
@@ -30,7 +32,9 @@ The default scope is **2000–2026, all natural hazards**. **2026 is partial.** 
 
 ## Data and reproduction
 
-The original EM-DAT export supplied by the project owner is preserved in `data/raw/`. It has 10,896 country-disaster records, 9,001 distinct event identifiers, 220 countries/territories, and 14 hazard types.
+The original EM-DAT export supplied by the project owner is preserved in `data/raw/`. It has 10,896 country-disaster records, 9,001 distinct event identifiers, 220 countries/territories, and 14 broad source hazard types. The interface exposes 34 categories using recorded subtypes; original classifications remain in the processed data and filtered downloads. Sinkhole and firestorm have no explicitly classified records in this export and are shown as unavailable.
+
+Only 1,864 records have source coordinate pairs. Daily replay includes only complete valid start dates on or before the 15 September 2026 export cutoff (9,331 records); other records remain in period totals. Pulses represent recorded starts, not hazard extent or propagation. Reduced-motion preferences suppress the expanding rings.
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -56,7 +60,7 @@ The dashboard now includes six linked views: choropleth, ranking, detail/overvie
 
 ```powershell
 python -m unittest discover -s tests -p test_data.py
-node --test tests/data.test.js
+node --test tests/data.test.js tests/hazards.test.js
 ```
 
 For browser integration checks, leave the local server running, install Playwright if needed (`python -m pip install -r tests/requirements.txt`), then run:
@@ -64,6 +68,7 @@ For browser integration checks, leave the local server running, install Playwrig
 ```powershell
 python tests/browser_check.py
 python tests/ux_check.py
+python tests/event_map_check.py
 ```
 
 The browser check detects installed Chrome on macOS/Windows, or uses Playwright Chromium on Linux. Set `CHROME_PATH` to override it. It verifies real-data totals and linked interactions, exports, empty/missing data states, mobile layout and local-only asset loading.
