@@ -10,7 +10,6 @@
   <header class="masthead">
     <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">◎</span> EARTH / IMPACT</a>
     <nav aria-label="Main navigation"><a href="index.html">Explorer</a><a class="active" aria-current="page" href="about.html">About the data <span aria-hidden="true">↗</span></a></nav>
-    <span class="prototype">INTERIM PROTOTYPE</span>
   </header>
   <main id="about-content" class="about-page">
     <section class="intro"><div><p class="eyebrow">GLOBAL DISASTER RISK EXPLORER / PROJECT METHODS</p><h1>About the data.<br><span>Behind the patterns.</span></h1><p class="intro-copy">A university data visualization project by Tobias Garcia and Ha Nguyen. We explore where major natural disasters are recorded, how their reported impacts differ, and how those patterns change over time.</p></div><aside class="intro-note"><strong>Read the evidence. Explore the context.</strong><p>These charts describe recorded impacts, not predicted risk. A high count and a high human or economic impact answer different questions.</p><a href="index.html" class="text-button">Return to the Explorer →</a></aside></section>
@@ -30,6 +29,7 @@
         <tr><td><code>by-country-year-type.csv, by-country-month-type.csv</code></td><td>Detailed annual and monthly aggregates. Monthly output includes region and country.</td></tr>
       </tbody></table></div>
       <p>The browser filters individual records to build map totals, lines and rankings. It stacks annual type counts for the streamgraph and constructs a World → Region → Country → Disaster Type hierarchy for the treemap. This keeps all views tied to the same counting method.</p>
+      <p>Hover or focus a disaster type for a short explanation. These summaries use the <a href="https://doc.emdat.be/docs/data-structure-and-content/glossary/">EM-DAT classification glossary</a> and supporting UNDRR, USGS and NOAA references listed in our <a href="docs/hazard-encoding.md">hazard terminology notes</a>. The source categories remain unchanged.</p>
       <h3>Data cleaning and preprocessing</h3>
       <ol class="method-list">
         <li><strong>Inspect and scope.</strong> Locate the EM-DAT header, trim text, validate required fields and restrict start years to 2000–2026 and all natural hazards. This supplied export needed no scope exclusions.</li>

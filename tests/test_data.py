@@ -62,6 +62,19 @@ class DataSemantics(unittest.TestCase):
         with self.assertRaises(ValueError):
             clean(pd.DataFrame([record(), record(**{'Total Deaths': 3})]), 2000, 2025)
 
+    def test_coordinates_preserve_zero_and_drop_invalid_pairs(self):
+        df, audit = clean(pd.DataFrame([
+            record(**{'Latitude': 0, 'Longitude': 0, 'Location': 'Source location'}),
+            record('2020-0002-USA', **{'Latitude': 91, 'Longitude': 10}),
+            record('2020-0003-USA', **{'Latitude': 10, 'Longitude': None}),
+        ]), 2000, 2025)
+        self.assertEqual(df.latitude.iloc[0], 0)
+        self.assertEqual(df.longitude.iloc[0], 0)
+        self.assertEqual(df.location.iloc[0], 'Source location')
+        self.assertTrue(df.latitude.iloc[1:].isna().all())
+        self.assertTrue(df.longitude.iloc[1:].isna().all())
+        self.assertEqual(audit['coordinate_coverage']['located_records'], 1)
+
     def test_historical_code_is_not_a_null_map_match(self):
         _, audit = clean(pd.DataFrame([record('2000-0001-SCG', ISO='SCG', Country='Serbia Montenegro')]), 2000, 2025)
         self.assertEqual(audit['unmapped_rows'], 1)

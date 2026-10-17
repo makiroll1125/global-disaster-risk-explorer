@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { summarize, filterRows, groupSummary } from '../js/data.js';
+import { summarize, filterRows, groupSummary, typeLabel } from '../js/data.js';
 
 const rows = [
   { iso: 'USA', country: 'United States', type: 'Flood', region: 'Americas', year: 2000, deaths: null },
@@ -19,6 +19,17 @@ test('coordinated filters and context exclusions', () => {
   assert.equal(filterRows(rows, state, { ignoreCountry: true }).length, 1);
   assert.equal(filterRows(rows, state, { ignoreYears: true }).length, 1);
   assert.equal(groupSummary(rows, 'iso', 'deaths').find(r => r.key === 'USA').reported, 1);
+});
+
+test('multiple hazards form a union while geography and time still intersect', () => {
+  const state = { start: 2000, end: 2001, types: ['Flood', 'Storm'], country: 'USA' };
+  assert.equal(filterRows(rows, state).length, 2);
+  assert.equal(filterRows(rows, { ...state, start: 2001 }).length, 1);
+  assert.equal(filterRows(rows, { ...state, types: [] }).length, 0);
+  assert.equal(filterRows(rows, { ...state, types: null }).length, 2);
+  assert.equal(filterRows(rows, { ...state, types: [] }, { ignoreType: true }).length, 2);
+  assert.equal(typeLabel({ types: ['Earthquake', 'Tsunami'] }), 'Earthquake + Tsunami');
+  assert.equal(typeLabel({ types: [] }), 'no disaster types selected');
 });
 
 test('monthly bins exclude unknown months and preserve unknown impacts', async () => {

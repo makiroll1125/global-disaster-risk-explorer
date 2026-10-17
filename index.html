@@ -16,7 +16,6 @@
   <header class="masthead">
     <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">◎</span> EARTH / IMPACT</a>
     <nav aria-label="Main navigation"><a class="active" aria-current="page" href="index.html">Explorer</a><a href="about.html">About the data <span aria-hidden="true">↗</span></a></nav>
-    <span class="prototype">INTERIM PROTOTYPE</span>
   </header>
   <main id="explore">
     <section class="intro">
@@ -30,7 +29,7 @@
       <button id="filter-toggle" aria-expanded="false" aria-controls="filter-fields">Global filters</button>
       <div id="filter-fields" class="filter-fields">
       <label>IMPACT MEASURE<select id="metric"><option value="records">Disaster records</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label>
-      <label>DISASTER TYPE<select id="type"><option value="">All natural hazards</option></select></label>
+      <label>DISASTER TYPES<select id="type" multiple aria-label="Disaster types"></select></label>
       <label>REGION<select id="region"><option value="">All regions</option></select></label>
       <label>COUNTRY / TERRITORY<select id="country"><option value="">All countries & territories</option></select></label>
       <button class="reset" id="reset">Reset filters <span aria-hidden="true">↺</span></button>
@@ -45,7 +44,9 @@
       <section class="panel map-panel" id="geography" aria-labelledby="map-title">
         <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear map highlight ×</button></div>
         <p class="panel-subtitle" id="map-subtitle">Country totals · select a country to highlight it in this map</p>
+        <div class="map-encoding"><fieldset class="radio-segment"><legend class="sr-only">Map encoding</legend><label><input type="radio" name="map-encoding" value="events" checked><span>Disaster locations</span></label><label><input type="radio" name="map-encoding" value="choropleth"><span>Country impacts</span></label></fieldset><span id="map-encoding-note">Color identifies disaster type</span></div>
         <div class="map-stage">
+          <div class="map-analysis-tools"><label><input id="map-clusters" type="checkbox" checked> Group overlaps</label><label>Marker size <select id="map-size" aria-label="Map marker size"><option value="equal">Equal</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label><button id="map-area-tool" class="quiet-button" aria-pressed="false">Select area</button><button id="map-clear-spatial" class="text-button">Clear area / country</button></div>
           <div class="map-toolbar">
             <fieldset class="radio-segment" id="map-mode"><legend class="sr-only">Map view</legend>
               <label><input type="radio" name="map-mode" value="period" checked><span>Selected period</span></label>
@@ -53,19 +54,43 @@
             </fieldset>
             <div class="year-controls map-years"><label>From<select id="map-start-year" aria-label="Map start year"></select></label><label>To<select id="map-end-year" aria-label="Map end year"></select></label></div>
           </div>
-          <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="Interactive world map of reported disasters"></svg><div class="map-controls"><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom">⤢</button></div></div>
-          <div id="playback" hidden><div class="playback-buttons"><button id="map-prev" aria-label="Previous year">←</button><button id="map-play">Play</button><button id="map-next" aria-label="Next year">→</button></div><input id="map-year" type="range" aria-label="Map playback year"><output id="map-current-year" aria-label="Current map year"></output><label>Speed <select id="map-speed"><option value="1200">Slow</option><option value="700" selected>Normal</option><option value="350">Fast</option></select></label></div>
+          <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="World map with country impact totals and disaster start locations"></svg><div class="map-controls"><button id="map-expand" aria-label="Expand map" aria-expanded="false" aria-controls="geography comparison" title="Expand map · Escape to restore">⛶</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom" title="Reset zoom">↺</button></div></div>
+          <div id="event-replay" hidden>
+            <div class="event-clock"><strong id="map-current-date"></strong><span>STARTS / SELECTED PERIOD</span></div>
+            <svg id="event-timeline" viewBox="0 0 900 70" preserveAspectRatio="none" role="img" aria-label="Disaster starts across the selected period, colored by type. Use the date slider below to select a date."></svg>
+            <input id="map-day" type="range" step="1" aria-label="Map playback date">
+          </div>
+          <div id="playback" hidden><div class="playback-buttons"><button id="map-prev" aria-label="Previous day">←</button><button id="map-play">Play</button><button id="map-next" aria-label="Next day">→</button></div><label class="playback-year-label" for="map-year">Year</label><input id="map-year" type="range" aria-label="Map playback year"><output id="map-current-year" aria-label="Current map year"></output><label>Speed <select id="map-speed" aria-label="Playback speed"><option value="24000">Slow · 24s/year</option><option value="12000" selected>Normal · 12s/year</option><option value="4000">Fast · 4s/year</option></select></label></div>
+          <div id="map-replay-guidance" class="map-replay-guidance" hidden><div class="replay-options"><label><input id="map-skip-quiet" type="checkbox"> Skip quiet gaps (compress time)</label><button id="map-next-recorded" class="text-button">Next recorded start</button></div><p id="map-replay-status" role="status"></p><div class="replay-recovery"><button id="map-show-references" class="text-button" hidden>Show country references</button><button id="map-clear-replay-selection" class="text-button" hidden>Clear local map filters</button></div></div>
+          <div class="event-status"><span id="event-count"></span><label><input id="map-approximate" type="checkbox" checked> Include country reference points</label></div>
+          <p id="event-today" class="event-today"></p>
+          <div id="map-size-legend" class="map-size-legend"></div>
         </div>
+        <details id="map-exploration" class="map-exploration">
+          <summary>Explore this selection <span id="map-selection-count"></span></summary>
+          <p class="selection-help">These controls affect only Geographic Overview. Drag a time interval below, select an area on the map, or choose a country. Area selection uses source coordinates only; a country selection can include reference-point records when that option is enabled.</p>
+          <div class="map-selection-inputs"><label>Country<select id="map-local-country" aria-label="Map exploration country"><option value="">All countries</option></select></label><label>From date<input id="map-selection-start" type="date" aria-label="Map selection start date"></label><label>To date<input id="map-selection-end" type="date" aria-label="Map selection end date"></label><button id="map-apply-dates" class="quiet-button">Apply dates</button><button id="map-clear-dates" class="text-button">Full period</button></div>
+          <details class="map-coordinate-inputs"><summary>Enter area bounds</summary><div><label>West<input id="map-west" type="number" step="any" min="-180" max="180" value="-180"></label><label>East<input id="map-east" type="number" step="any" min="-180" max="180" value="180"></label><label>South<input id="map-south" type="number" step="any" min="-90" max="90" value="-90"></label><label>North<input id="map-north" type="number" step="any" min="-90" max="90" value="90"></label><button id="map-apply-area" class="quiet-button">Apply bounds</button></div></details>
+          <p id="map-selection-status" class="selection-status" role="status"></p>
+          <div class="selection-timeline-heading"><span>START DATES · DRAG TO SELECT AN INTERVAL</span><button id="map-reset-selection" class="text-button">Reset exploration</button></div>
+          <svg id="selection-timeline" role="img" aria-label="Brush a start-date interval; From and To date inputs provide keyboard access"></svg>
+          <div id="map-selection-stats" class="map-selection-stats"></div>
+          <div class="map-selection-grid"><div><p class="selection-section-title">DISASTER COMPOSITION <span>Selected records</span></p><div id="map-selection-composition"></div></div><div><div class="selection-list-heading"><p class="selection-section-title">RECORDS <span id="map-list-context"></span></p><button id="map-list-all" class="text-button" hidden>All selected records</button><button id="map-cluster-zoom" class="text-button" hidden>Zoom into group</button></div><label class="sr-only" for="map-record-search">Search selected map records</label><input id="map-record-search" type="search" placeholder="Search country, hazard, name or identifier…"><div id="map-record-list" class="map-record-list"></div><div class="map-record-pages"><button id="map-record-prev" class="quiet-button">Previous</button><span id="map-record-page"></span><button id="map-record-next" class="quiet-button">Next</button></div></div></div>
+          <section id="map-event-detail" class="map-event-detail" aria-labelledby="map-event-detail-title"><h3 id="map-event-detail-title">Inspect an event</h3><p>Select a marker, group, or record to keep its details here.</p></section>
+        </details>
         <div class="map-footer"><div id="legend"></div><span class="map-hint">Scroll to zoom · drag to pan</span></div>
+        <details class="hazard-key"><summary>Disaster colors <span>Filled = source coordinate · hollow = country reference</span></summary><div id="hazard-legend"></div><p>Hurricane / typhoon includes all tropical cyclones. Sinkhole and firestorm have no explicitly classified records in this export; subsidence and wildfire retain their source classifications.</p></details>
+        <p class="footnote" id="event-coverage"></p>
         <p class="footnote" id="map-coverage"></p>
       </section>
       <section class="panel ranking-panel" id="comparison" aria-labelledby="rank-title">
         <div class="panel-heading"><div><p class="eyebrow">02 / COMPARE IMPACTS</p><h2 id="rank-title">The global picture</h2></div></div>
         <div class="segmented" role="group" aria-label="Rank by"><button id="rank-country" aria-pressed="true">Countries</button><button id="rank-type" aria-pressed="false">Disaster types</button></div>
         <div id="ranking-range" class="year-controls local-range" data-chart="Ranking"></div>
+        <div id="rank-selection" class="rank-selection" hidden><span id="rank-filter-count"></span><button id="rank-all" class="text-button">All</button><button id="rank-none" class="text-button">None</button></div>
       <p id="ranking-note" class="panel-subtitle"></p>
-        <svg id="ranking" viewBox="0 0 430 410" role="img" aria-label="Interactive ranking"></svg>
-        <p class="footnote">Select a bar to highlight it only in this chart. Values show reported totals.</p>
+        <div id="ranking-scroll" class="ranking-scroll" tabindex="0" role="region" aria-label="Scrollable impact ranking"><svg id="ranking" viewBox="0 0 430 410" role="img" aria-label="Interactive ranking"></svg></div>
+        <p class="footnote" id="ranking-instructions">Select a country bar to highlight it only here. Values show reported totals.</p>
       </section>
     </div>
 

@@ -14,9 +14,15 @@ export function summarize(rows, metric) {
 
 export function filterRows(rows, state, { ignoreCountry = false, ignoreYears = false, ignoreType = false } = {}) {
   return rows.filter(r => (ignoreYears || (r.year >= state.start && r.year <= state.end))
-    && (ignoreType || !state.type || r.type === state.type)
+    && (ignoreType || (Array.isArray(state.types) ? state.types.includes(r.type) : !state.type || r.type === state.type))
     && (!state.region || r.region === state.region)
     && (ignoreCountry || !state.country || r.iso === state.country));
+}
+
+export function typeLabel(state) {
+  if (!Array.isArray(state.types)) return state.type || 'all natural hazards';
+  if (!state.types.length) return 'no disaster types selected';
+  return state.types.length <= 2 ? state.types.join(' + ') : `${state.types.length} hazard types`;
 }
 
 export function groupSummary(rows, key, metric) {
