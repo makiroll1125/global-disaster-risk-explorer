@@ -28,6 +28,14 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto('http://127.0.0.1:8000')
     page.wait_for_selector('body[data-ready="true"]')
+    distances = page.evaluate('''async () => {
+      const {hazardColors} = await import('/js/hazards.js');
+      const distance = (a, b) => { a = d3.lab(hazardColors[a]); b = d3.lab(hazardColors[b]); return Math.hypot(a.l-b.l, a.a-b.a, a.b-b.b); };
+      const floods = ['Flood', 'Riverine flood', 'Flash flood', 'Coastal flood'];
+      return { heatFire: distance('Heatwave', 'Wildfire'), floods: floods.flatMap((a, i) => floods.slice(i+1).map(b => distance(a, b))) };
+    }''')
+    assert distances['heatFire'] > 45
+    assert min(distances['floods']) > 30
     assert page.locator('.country').evaluate_all('(nodes) => new Set(nodes.map(n => n.getAttribute("fill"))).size') == 1
     assert page.locator('.map-footer').is_hidden()
     assert page.locator('.event-pin').first.is_visible()
@@ -43,6 +51,24 @@ with sync_playwright() as p:
     assert page.locator('#ranking-scroll').evaluate('(n) => n.clientHeight') == country_height
     assert page.locator('#ranking-scroll').evaluate('(n) => n.scrollHeight > n.clientHeight * 2')
     eq = page.locator('.rank-row[aria-label^="Earthquake:"]')
+    eq.click()
+    assert page.locator('.stat-value').first.get_attribute('title') == '10,222'
+    assert eq.get_attribute('aria-pressed') == 'false'
+    tsu = page.locator('.rank-row[aria-label^="Tsunami:"]')
+    tsu.click()
+    assert page.locator('.stat-value').first.get_attribute('title') == '10,189'
+    eq.click()
+    assert page.locator('.stat-value').first.get_attribute('title') == '10,863'
+    page.click('#rank-all')
+    tsu.click()
+    assert page.locator('.stat-value').first.get_attribute('title') == '10,863'
+    assert eq.get_attribute('aria-pressed') == 'true' and tsu.get_attribute('aria-pressed') == 'false'
+    page.click('#rank-none')
+    eq.focus()
+    page.keyboard.press('Space')
+    assert page.locator('.stat-value').first.get_attribute('title') == '674'
+    page.keyboard.press('Space')
+    assert page.locator('.stat-value').first.get_attribute('title') == '0'
     eq.click()
     assert page.locator('.stat-value').first.get_attribute('title') == '674'
     tsu = page.locator('.rank-row[aria-label^="Tsunami:"]')
@@ -62,6 +88,26 @@ with sync_playwright() as p:
     assert page.locator('.rank-row').count() == 34
     page.click('#rank-all')
     assert page.locator('.stat-value').first.get_attribute('title') == '10,896'
+    heat = page.locator('.rank-row[aria-label^="Heatwave:"]')
+    heat.hover()
+    assert 'unusually hot weather' in page.locator('#tooltip').inner_text()
+    heat.focus()
+    assert page.locator('#tooltip').is_visible()
+    assert not page.locator('.prototype').count()
+
+    # The checkbox menu uses exactly the same exclusion behavior after All.
+    page.click('#type-menu-button')
+    page.locator('#type-menu').get_by_role('button', name='All', exact=True).click()
+    menu_tsunami = page.locator('#type-menu [data-value="Tsunami"]')
+    menu_tsunami.scroll_into_view_if_needed()
+    menu_tsunami.hover()
+    assert 'displacement of water' in page.locator('#tooltip').inner_text()
+    menu_tsunami.locator('input').uncheck()
+    assert page.locator('.stat-value').first.get_attribute('title') == '10,863'
+    assert page.locator('#type-menu [data-value="Earthquake"] input').is_checked()
+    menu_tsunami.locator('input').check()
+    assert page.locator('.stat-value').first.get_attribute('title') == '10,896'
+    page.keyboard.press('Escape')
 
     # Every sticky filter opens/closes at the reading position, far below its DOM origin.
     for identifier in ['metric', 'type', 'region', 'country']:

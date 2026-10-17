@@ -1,3 +1,5 @@
+import { hazardColors, hazardDescriptions } from './hazards.js';
+
 /* Local controls receive only their owner's mutable state and redraw callback. */
 export function rangeControls(id, local, bounds, redraw) {
   const host = document.getElementById(id);
@@ -34,7 +36,7 @@ export function setupStickyFilters() {
 
 // Sticky native selects can scroll their original document position into view in Chrome.
 // Keep the select as the data control and use a fixed overlay for user interaction.
-export function setupFilterMenus() {
+export function setupFilterMenus({ showTip, hideTip } = {}) {
   const menus = [...document.querySelectorAll('.filter-fields select')].map(select => {
     const multiple = select.multiple;
     select.hidden = true;
@@ -53,6 +55,7 @@ export function setupFilterMenus() {
     const keepFocus = node => node.focus({ preventScroll: true });
     const close = (focus = false) => {
       popup.hidden = true; button.setAttribute('aria-expanded', 'false');
+      hideTip?.(popup.id);
       if (focus) keepFocus(button);
     };
     const position = () => {
@@ -109,6 +112,16 @@ export function setupFilterMenus() {
           } else {
             item.type = 'button'; item.setAttribute('role', 'option'); item.disabled = option.disabled; item.textContent = option.label;
             item.onclick = () => { select.value = option.value; change(); close(true); };
+          }
+          if (select.id === 'type') {
+            const description = hazardDescriptions[option.value];
+            const swatch = document.createElement('i'); swatch.className = 'hazard-swatch';
+            swatch.style.backgroundColor = hazardColors[option.value];
+            item.insertBefore(swatch, item.lastChild);
+            const tip = event => showTip?.(event, option.value, description, option.disabled ? 'No explicitly classified records in this export.' : 'Checked types are included in all views. Click to toggle this type.');
+            item.onpointerenter = tip; item.onpointerleave = () => hideTip?.();
+            item.onfocusin = tip; item.onfocusout = () => hideTip?.();
+            item.querySelector('input').setAttribute('aria-description', description);
           }
           list.append(item);
         });

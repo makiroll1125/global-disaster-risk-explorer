@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { hazardType, hazardColors, eventDay, hasCoordinates } from '../js/hazards.js';
+import { hazardType, hazardColors, hazardDescriptions, eventDay, hasCoordinates } from '../js/hazards.js';
 
 test('source subtypes expose distinct hazards without inventing sinkholes or firestorms', () => {
   assert.equal(hazardType({ type: 'Earthquake', subtype: 'Tsunami' }), 'Tsunami');
@@ -32,4 +32,7 @@ test('all real records retain totals and have a defined display color', () => {
   assert.equal(records.filter(row => hazardType(row) === 'Avalanche').length, 56);
   assert.equal(records.filter(hasCoordinates).length, metadata.coordinate_coverage.located_records);
   assert.equal(records.filter(row => ['Sinkhole', 'Firestorm'].includes(hazardType(row))).length, 0);
+  assert.equal(new Set(Object.values(hazardColors)).size, Object.keys(hazardColors).length);
+  assert.deepEqual(Object.keys(hazardDescriptions).sort(), Object.keys(hazardColors).sort());
+  assert.ok(Object.values(hazardDescriptions).every(text => text.length > 20 && text.length < 180));
 });

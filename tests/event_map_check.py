@@ -44,6 +44,7 @@ with sync_playwright() as p:
     assert page.locator('#type option.generated:not([disabled])').count() == 34
     assert page.locator('#type option[value="Sinkhole"]').evaluate('(n) => n.disabled')
     assert page.locator('#type option[value="Firestorm"]').evaluate('(n) => n.disabled')
+    page.locator('#map-clusters').uncheck()
     assert page.locator('.event-pin.located').count() == 1864
     page.locator('#map-approximate').uncheck()
     assert page.locator('.event-pin.approximate').count() == 0
@@ -60,7 +61,7 @@ with sync_playwright() as p:
     # Daily playback emits the source-located March 11 tsunami, in the timeline color.
     page.wait_for_timeout(300)
     other_views = page.locator('#timeline').inner_html()
-    page.select_option('#map-speed', '1200')
+    page.select_option('#map-speed', '4000')
     page.click('#map-play')
     page.wait_for_selector('.event-pulse')
     assert page.locator('.event-pin[data-id="2011-0082-JPN"]').count() == 1
@@ -110,9 +111,9 @@ with sync_playwright() as p:
     assert page.locator('#map-day').get_attribute('max') == str(day('2026-09-15'))
     seek(page, '2026-09-15')
     assert page.locator('#map-next').is_disabled()
-    page.click('#map-play')
-    assert page.locator('#map-current-date').inner_text() != '15 Sep 2026'
-    page.click('#map-play')
+    # No Japanese tsunami starts in the explicitly selected 2026 range.
+    assert page.locator('#map-play').is_disabled()
+    assert 'No records match' in page.locator('#map-replay-status').inner_text()
     choose(page, 'country', '')
     hazards(page, ['Avalanche'])
     assert page.locator('.stat-value').first.get_attribute('title') == '56'

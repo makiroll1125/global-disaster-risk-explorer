@@ -1,4 +1,5 @@
 import { rangeControls } from './controls.js';
+import { hazardDescriptions } from './hazards.js';
 import { filterRows, seasonalData, disasterHierarchy, typeLabel } from './data.js';
 const d3 = window.d3;
 const $ = id => document.getElementById(id);
@@ -58,10 +59,12 @@ function renderStream(ctx) {
     emphasize(d.key);
     const year=Math.max(defaults.start,Math.min(defaults.end,Math.round(x.invert(d3.pointer(event,svg.node())[0]))));
     guide.attr('x1',x(year)).attr('x2',x(year)).attr('visibility','visible');
-    showTip(event,d.key,`${year}: ${(counts.get(year)?.get(d.key)||0).toLocaleString()} country-disaster records`,year===2026?'Partial year':'Click to toggle the local type highlight');
+    showTip(event,d.key,`${year}: ${(counts.get(year)?.get(d.key)||0).toLocaleString()} country-disaster records`,`${hazardDescriptions[d.key]} ${year===2026?'Partial year.':'Click to toggle the local type highlight.'}`);
   }).on('pointerleave',()=>{emphasize(null);guide.attr('visibility','hidden');hideTip();});
   const legend=d3.select('#stream-legend').selectAll('button').data(keys).join('button');
-  legend.attr('aria-pressed',d=>d===streamState.type).on('click',(_,key)=>toggle(null,{key})).on('pointerenter',(_,key)=>emphasize(key)).on('pointerleave',()=>emphasize(null)).on('focus',(_,key)=>emphasize(key)).on('blur',()=>emphasize(null));
+  legend.attr('aria-pressed',d=>d===streamState.type).on('click',(_,key)=>toggle(null,{key}))
+    .on('pointerenter focus',(event,key)=>{emphasize(key);showTip(event,key,hazardDescriptions[key],'Select to highlight this type only in this chart.');})
+    .on('pointerleave blur',()=>{emphasize(null);hideTip();});
   legend.each(function(key){const item=d3.select(this);item.selectAll('*').remove();item.append('i').style('background',typeColor(key));item.append('span').text(key);});
   $('stream-note').textContent=`${streamState.start}–${streamState.end} outlined · Layer thickness represents annual country-disaster records, regardless of the impact measure. Vertical position is a flowing baseline, not an absolute total. Select a layer or legend item to highlight a type only here.`;
   if(!context.length) empty(svg,width,'No records for the selected geography.');
