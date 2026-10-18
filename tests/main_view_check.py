@@ -152,7 +152,9 @@ with sync_playwright() as p:
     assert page.locator('#period-map-a>g').get_attribute('transform') == page.locator('#period-map-b>g').get_attribute('transform')
     page.locator('#period-comparison').screenshot(path=str(ARTIFACTS / 'period-event-totals.png'), style='.masthead,.filter-bar{visibility:hidden!important}')
     assert page.locator('#ch-network .ch-edge').count() > 0
-    assert page.locator('#ch-matrix .ch-cell').count() == 80
+    assert page.locator('#ch-matrix .ch-cell').count() == (
+        page.locator('#ch-network .ch-country-node').count() * page.locator('#ch-network .ch-hazard-node').count()
+    )
     for width in [390, 320]:
         page.set_viewport_size({'width': width, 'height': 844})
         page.wait_for_timeout(250)

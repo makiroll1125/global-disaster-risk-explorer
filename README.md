@@ -16,7 +16,7 @@ The opening comparison shows annual reported deaths down 28.8%, affected totals 
 
 Change periods, measures or comparison basis; select a country on either synchronized map. The regional table includes all records, including those without coordinates. Select disaster types in the ranking to filter across views. Year ranges and country selections belong to their respective charts. The summary cards and CSV download at the bottom cover the full 2000-2026 archive under the selected disaster-type filters.
 
-The event map supports date replay, area selection and source-record inspection. Only 17.1% of records have source coordinates. Hollow country references are optional and do not represent event locations. The treemap supports local drill-down; the network and matrix support linked highlighting, country comparison, similarity ordering and figure export.
+The event map supports date replay, area selection and source-record inspection. Only 17.1% of records have source coordinates. Hollow country references are optional and do not represent event locations. The treemap supports local drill-down; the network and record-count matrix support country/type selection, linked highlighting, country comparison, similarity ordering and figure export.
 
 - [Final report, regional table and current figures](docs/final-report.md)
 - [Data definitions, calculation rules and limitations](docs/data-methods.md)
