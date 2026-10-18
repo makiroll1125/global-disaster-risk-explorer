@@ -4,6 +4,7 @@ import { metrics, summarize, filterRows, groupSummary, timeSeries, validMonth, t
 import { hazardColors, hazardDescriptions, hazardType, DAY } from './hazards.js';
 import { EventMap } from './event-map.js';
 import { nextReplayDate, upperBound, advanceReplayDate } from './map-analysis.js';
+import { CountryHazardExplorer } from './country-hazard.js';
 
 const $ = id => document.getElementById(id);
 const d3 = window.d3;
@@ -14,6 +15,7 @@ let historyState, mapState, treeState, rankingState, seasonState, streamState, t
 const historyFilters = () => ({ ...state, ...historyState });
 let playbackTimer;
 let eventMap;
+let countryHazardExplorer;
 let mapColor, lastCountryPaint = 0;
 let syncFilterMenus = () => {};
 const cutoffDate = () => Date.parse(metadata.reporting_cutoff + 'T00:00:00Z');
@@ -143,6 +145,7 @@ function setup() {
   });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { if (eventMap.areaSelecting) eventMap.enableAreaSelection(false); else setMapExpanded(false); } });
   syncFilterMenus = setupFilterMenus({ showTip, hideTip });
+  countryHazardExplorer = new CountryHazardExplorer({ rows, metadata, colors: hazardColors, showTip, hideTip });
   setupStickyFilters(); setupMap(); setupBrush(); render();
   let resizeTimer;
   window.addEventListener('resize', () => {
@@ -613,6 +616,7 @@ function render({ alignReplay = false } = {}) {
   $('scope').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} / ${typeLabel(state)} / Global scope · all years ${timeBounds.start}–${timeBounds.end} · ${selected.length.toLocaleString()} records`;
   renderStats(selected); renderMap({ alignReplay }); renderRanking(); renderTimeline(); renderInsight(selected); renderTable(selected);
   renderExtraCharts({ rows, state, seasonState, streamState, treeState, defaults: timeBounds, metadata, typeColor, showTip, hideTip, accessibleClick, countryNames });
+  countryHazardExplorer.update(selected, state);
   document.body.dataset.ready = 'true';
 }
 
