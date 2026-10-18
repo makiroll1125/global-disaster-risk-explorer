@@ -128,26 +128,40 @@
     <section class="panel country-hazard-panel" id="country-hazard" aria-labelledby="country-hazard-title">
       <div class="panel-heading country-hazard-heading"><div><p class="eyebrow">07 / COUNTRY–HAZARD RELATIONSHIPS</p><h2 id="country-hazard-title">How do disaster profiles connect countries?</h2></div><button id="ch-poster-open" class="quiet-button">Poster view / Export figure</button></div>
       <p class="panel-subtitle">Explore how countries are connected to different disaster types. The network reveals relationship structures, while the matrix enables direct comparison of disaster profiles across countries.</p>
+      <div class="ch-selection-controls" aria-label="Country and disaster type selections">
+        <details id="ch-country-selector" class="ch-multi-select">
+          <summary><span>COUNTRIES</span><strong id="ch-country-summary">Loading…</strong></summary>
+          <div class="ch-multi-panel">
+            <label class="sr-only" for="ch-country-search">Search countries</label><input id="ch-country-search" type="search" placeholder="Search name or ISO code…" autocomplete="off">
+            <div class="ch-selector-actions"><button id="ch-country-default" class="quiet-button">Contrast default</button><button id="ch-country-top" class="quiet-button">Top by frequency</button><button id="ch-country-all" class="quiet-button">All</button><button id="ch-country-clear" class="text-button">Clear</button></div>
+            <div id="ch-country-options" class="ch-option-list" role="group" aria-label="Available countries"></div>
+          </div>
+        </details>
+        <details id="ch-hazard-selector" class="ch-multi-select">
+          <summary><span>DISASTER TYPES</span><strong id="ch-hazard-summary">Loading…</strong></summary>
+          <div class="ch-multi-panel">
+            <label class="sr-only" for="ch-hazard-search">Search disaster types</label><input id="ch-hazard-search" type="search" placeholder="Search disaster types…" autocomplete="off">
+            <div class="ch-selector-actions"><button id="ch-hazard-default" class="quiet-button">Contrast default</button><button id="ch-hazard-top" class="quiet-button">Top by frequency</button><button id="ch-hazard-all" class="quiet-button">All</button><button id="ch-hazard-clear" class="text-button">Clear</button></div>
+            <div id="ch-hazard-options" class="ch-option-list" role="group" aria-label="Available disaster types"></div>
+          </div>
+        </details>
+      </div>
       <div class="ch-controls" aria-label="Country–hazard view controls">
-        <label>COUNTRIES<select id="ch-country-count"><option value="5">Top 5</option><option value="10" selected>Top 10</option><option value="15">Top 15</option></select></label>
-        <label>NETWORK EDGES<select id="ch-edge-limit"><option value="2">Top 2</option><option value="3" selected>Top 3</option><option value="all">All</option></select></label>
+        <label>NETWORK EDGES<select id="ch-edge-limit"><option value="all" selected>All connections</option><option value="3">Top 3 per country</option><option value="2">Top 2 per country</option></select></label>
         <label>ROW ORDER<select id="ch-order"><option value="frequency">Frequency</option><option value="alphabetical">Alphabetical</option><option value="similarity">Profile similarity</option></select></label>
         <div class="ch-time-control"><span>TIME RANGE</span><label><span class="sr-only">Country–hazard start year</span><select id="ch-start" aria-label="Country–hazard start year"></select></label><span>–</span><label><span class="sr-only">Country–hazard end year</span><select id="ch-end" aria-label="Country–hazard end year"></select></label></div>
         <button id="ch-reset" class="text-button">Reset view ↺</button>
       </div>
-      <div class="ch-search-row">
-        <label for="ch-country-search">INCLUDE A COUNTRY</label><div><input id="ch-country-search" type="search" list="ch-country-list" placeholder="Search name or ISO code…" autocomplete="off"><datalist id="ch-country-list"></datalist><button id="ch-add-country" class="quiet-button">Include</button></div><span id="ch-search-status" role="status"></span>
-      </div>
       <div class="ch-view-grid">
-        <section class="ch-view ch-network-view" aria-labelledby="ch-network-title"><div class="ch-view-heading"><div><span>STRUCTURAL VIEW</span><h3 id="ch-network-title">Bipartite network</h3></div><span class="ch-key-line">Uniform edges · hazard color</span></div><div class="ch-svg-scroll"><svg id="ch-network" role="img"></svg></div><p>Only the strongest connections per country are shown by default. Hidden edges still exist and are temporarily revealed from the matrix.</p></section>
-        <section class="ch-view ch-matrix-view" aria-labelledby="ch-matrix-title"><div class="ch-view-heading"><div><span>PRIMARY ANALYTICAL VIEW</span><h3 id="ch-matrix-title">Country–hazard matrix</h3></div><fieldset class="radio-segment"><legend class="sr-only">Matrix metric</legend><label><input type="radio" name="ch-metric" value="share" checked><span>Hazard Share (%)</span></label><label><input type="radio" name="ch-metric" value="count"><span>Record Count</span></label></fieldset></div><div class="ch-svg-scroll"><svg id="ch-matrix" role="img" aria-label="Country by hazard matrix"></svg></div><p>Striped cells indicate no recorded relationship. A reported zero impact is distinct from an unreported impact in the details.</p></section>
+        <section class="ch-view ch-network-view" aria-labelledby="ch-network-title"><div class="ch-view-heading"><div><span>STRUCTURAL VIEW</span><h3 id="ch-network-title">Bipartite network</h3></div><span class="ch-key-line">Uniform edges · hazard color</span></div><div class="ch-svg-scroll"><svg id="ch-network" role="img"></svg></div><p id="ch-edge-note">All recorded relationships are shown by default.</p></section>
+        <section class="ch-view ch-matrix-view" aria-labelledby="ch-matrix-title"><div class="ch-view-heading"><div><span>PRIMARY ANALYTICAL VIEW</span><h3 id="ch-matrix-title">Country–hazard matrix</h3></div><span class="ch-key-line">Color = exact record count</span></div><div class="ch-svg-scroll"><svg id="ch-matrix" role="img" aria-label="Country by hazard record-count matrix"></svg></div><p>A zero means no matching country–hazard record in the current filtered data; it does not mean the event is impossible. Missing impact reports remain distinct from reported zero impacts in tooltips.</p></section>
       </div>
-      <div class="ch-status"><p id="ch-subset-note"></p><p id="ch-denominator-note"></p></div>
+      <div class="ch-status"><p id="ch-subset-note"></p><p id="ch-selection-note"></p></div>
       <aside id="ch-details" class="ch-details" aria-live="polite"><p><strong>Select one or two countries</strong> to inspect their profiles and compare historical disaster composition.</p></aside>
       <p class="footnote">Similarity ordering uses deterministic average-linkage hierarchical clustering with cosine distance across every hazard type in the current filtered data, not only the visible columns. Clusters describe historical recorded disaster composition—not future probability, vulnerability, or safety.</p>
       <dialog id="ch-poster-dialog" class="ch-poster-dialog" aria-labelledby="ch-poster-title">
         <div class="ch-poster-toolbar"><div><p class="eyebrow">POSTER-READY FIGURE</p><h2 id="ch-poster-title">Country–hazard relationships</h2></div><div><button id="ch-export-svg" class="quiet-button">Export SVG</button><button id="ch-export-png" class="quiet-button">Export high-res PNG</button><button id="ch-poster-close" class="text-button" aria-label="Close poster view">Close ×</button></div></div>
-        <div id="ch-poster-warning" class="ch-poster-warning" hidden><p>This selection has more than 10 countries and may not remain legible in a poster.</p><button id="ch-poster-preset" class="quiet-button">Use 10-country poster preset</button></div>
+        <div id="ch-poster-warning" class="ch-poster-warning" hidden><p id="ch-poster-warning-text">This selection is too large for a legible poster.</p><button id="ch-poster-preset" class="quiet-button">Use contrast poster preset (6 × 8)</button></div>
         <div class="ch-poster-canvas"><svg id="ch-poster-svg" role="img" aria-label="Poster-ready country–hazard network and matrix figure"></svg></div>
       </dialog>
     </section>
