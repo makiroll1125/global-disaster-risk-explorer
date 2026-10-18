@@ -20,18 +20,51 @@
   <main id="explore">
     <section class="intro">
       <div><p class="eyebrow">GLOBAL DISASTER RISK EXPLORER · 2000–2026</p>
-        <h1>A world of hazards.<br><span>Unequal impacts.</span></h1>
-        <p class="intro-copy">Explore where major natural disasters are recorded, how their impacts differ, and how the picture changes over time.</p></div>
-      <aside class="intro-note"><span class="small-dot"></span><strong>Start with a place. Follow a pattern.</strong><p>Compare places and hazards using each chart's controls.</p><span class="source-tag">EM-DAT / CRED · UCLouvain</span></aside>
+        <h1>Human impacts fell.<br><span>Reported damage rose.</span></h1>
+        <p class="intro-copy">Comparing 2000-2005 with 2020-2025, annual reported deaths and affected totals were lower, while adjusted damage was higher. Explore the differences across regions, countries and hazards.</p></div>
+      <aside class="intro-note"><span class="small-dot"></span><strong>Compare the periods. Follow the differences.</strong><p>The opening comparison excludes partial 2026 and uses damage in 2025 US dollars. These observations do not establish a continuous trend.</p><span class="source-tag">EM-DAT / CRED · UCLouvain</span></aside>
     </section>
 
+    <nav class="story-nav" aria-label="Explore the story"><a href="#period-comparison">Compare periods</a><a href="#geography">Inspect locations and hazards</a><a href="#stream-title">Follow hazard composition</a><a href="#tree-title">Explore places</a><a href="#country-hazard">Compare profiles</a></nav>
     <div class="context-line"><p id="scope" aria-live="polite">Loading local EM-DAT data…</p><span class="partial">2026 is a partial year</span></div>
     <div id="error" class="error" role="alert" hidden></div>
-    <section id="stats" class="stats" aria-label="Summary of filtered records"></section>
+
+
+    <section class="panel period-panel" id="period-comparison" aria-labelledby="period-title">
+      <div class="panel-heading"><div><p class="eyebrow">1) COMPARE TWO PERIODS</p><h2 id="period-title">How did human and economic impacts change?</h2></div></div>
+      <p class="panel-subtitle">Start with 2000-2005 and 2020-2025, two equally long periods excluding partial 2026. Compare reported impacts, then investigate regional differences.</p>
+      <div class="period-controls">
+        <fieldset><legend>Period A</legend><label>From<select id="period-a-start" aria-label="Period A start year"></select></label><label>To<select id="period-a-end" aria-label="Period A end year"></select></label></fieldset>
+        <fieldset><legend>Period B</legend><label>From<select id="period-b-start" aria-label="Period B start year"></select></label><label>To<select id="period-b-end" aria-label="Period B end year"></select></label></fieldset>
+        <label>Measure<select id="period-metric"><option value="records">Event totals</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label>
+        <label>View<select id="period-view"><option value="countries">Country impacts</option><option value="events">Event totals (locations)</option></select></label>
+        <label>Compare<select id="period-basis"><option value="annual">Annual averages</option><option value="total">Period totals</option></select></label>
+        <button id="period-swap" class="quiet-button">Swap A / B</button><button id="period-zoom-reset" class="text-button">Reset both maps</button>
+      </div>
+      <section class="period-overview-section" aria-label="Period impact overview">
+      <div class="period-overview-heading"><h3>Fewer reported human impacts, greater economic damage?</h3><p id="period-overview-scope"></p></div>
+      <div id="period-overview" class="period-overview" aria-label="Reported impact comparisons"></div>
+      <p id="period-finding" class="period-finding" aria-live="polite"></p>
+      </section>
+      <label class="period-reference-option" id="period-reference-option" hidden><input id="period-approximate" type="checkbox"> Show approximate country references</label>
+      <p id="period-status" class="period-status" role="status"></p>
+      <div class="period-regions"><h3>Which region changed most?</h3><p id="period-region-note"></p><div class="table-scroll"><table><thead><tr><th>Region</th><th id="period-region-a">A</th><th id="period-region-b">B</th><th id="period-region-delta">B − A</th><th>Change (%)</th></tr></thead><tbody id="period-region-body"></tbody></table></div></div>
+      <div class="period-geography">
+      <div class="period-map-heading"><h3>Where do the differences appear?</h3><p>Choose a measure above. Both maps use the same color scale and zoom.</p></div>
+      <div class="period-maps"><figure><figcaption id="period-a-label"></figcaption><svg id="period-map-a" viewBox="0 0 600 310" role="img" aria-label="Country totals for Period A"></svg></figure><figure><figcaption id="period-b-label"></figcaption><svg id="period-map-b" viewBox="0 0 600 310" role="img" aria-label="Country totals for Period B"></svg></figure></div>
+      <div class="period-map-tools"><span>Scroll to zoom · drag either map to pan both</span><button id="period-zoom-in" class="quiet-button" aria-label="Zoom in both comparison maps">+</button><button id="period-zoom-out" class="quiet-button" aria-label="Zoom out both comparison maps">−</button></div>
+      <div id="period-legend" class="period-legend" aria-label="Shared country scale"></div>
+      <p id="period-map-coverage" class="footnote"></p>
+      </div>
+      <div class="period-detail-heading"><h3>Compare impacts and hazard composition</h3><label>Place<select id="period-country" aria-label="Period comparison country"><option value="">Worldwide / filtered geography</option></select></label><p>Select a country for local details.</p></div>
+      <div class="period-details"><div><h4>Did frequency and impact move together?</h4><p id="period-impact-note"></p><div class="table-scroll"><table><thead><tr><th>Measure</th><th>A</th><th>B</th><th>B − A</th></tr></thead><tbody id="period-impact-body"></tbody></table></div></div><div><h4>Did the hazard mix change?</h4><p>Record shares · six largest types + Other.</p><div class="period-pair-key"><span><i class="period-key-a"></i>Period A</span><span><i class="period-key-b"></i>Period B</span></div><div id="period-composition"></div></div></div>
+      <p class="footnote">Reported impacts only; coverage may differ. Annual averages use all selected years. Counts are country-disaster records, not unique global events.</p>
+      <p class="period-more"><a href="#geography">Explore country–hazard relationships in the network and matrix ↓</a></p>
+    </section>
 
     <div class="main-grid">
       <section class="panel map-panel" id="geography" aria-labelledby="map-title">
-        <div class="panel-heading"><div><p class="eyebrow">1) GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear map highlight ×</button></div>
+        <div class="panel-heading"><div><p class="eyebrow">2) INSPECT THE LOCATIONS</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear map highlight ×</button></div>
         <p class="panel-subtitle" id="map-subtitle">Event locations · select a record for details</p>
         <p class="map-precision-note" id="map-precision-note"></p>
         <div class="map-stage">
@@ -43,7 +76,7 @@
             </fieldset>
             <div class="year-controls map-years"><label>From<select id="map-start-year" aria-label="Map start year"></select></label><label>To<select id="map-end-year" aria-label="Map end year"></select></label></div>
           </div>
-          <p class="map-compare-link"><a href="#period-comparison">Compare two periods side by side ↓</a><span>Shared scale and zoom; no playback needed.</span></p>
+          <p class="map-compare-link"><a href="#period-comparison">Return to the period comparison &#8593;</a><span>Shared scale and zoom; no playback needed.</span></p>
           <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="World map with country impact totals and disaster start locations"></svg><div class="map-controls"><button id="map-expand" aria-label="Expand map" aria-expanded="false" aria-controls="geography comparison" title="Expand map · Escape to restore">⛶</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom" title="Reset zoom">↺</button></div></div>
           <div id="event-replay" hidden>
             <div class="event-clock"><strong id="map-current-date"></strong><span>STARTS / SELECTED PERIOD</span></div>
@@ -69,12 +102,12 @@
           <section id="map-event-detail" class="map-event-detail" aria-labelledby="map-event-detail-title"><h3 id="map-event-detail-title">Inspect an event</h3><p>Select a marker or record to keep its details here.</p></section>
         </details>
         <div class="map-footer"><details id="map-color-key" hidden><summary id="map-color-key-title">Disaster colors</summary><div id="legend"></div></details><span class="map-hint">Scroll to zoom · drag to pan</span></div>
-        <details class="hazard-key"><summary>Location precision <span>Filled = source coordinate · hollow = country reference</span></summary><p>Source coordinates come from EM-DAT, without independent verification. Hollow references identify countries, not event locations.</p><p>Compare hazard composition in the <a href="#period-comparison">period comparison</a> or the <a href="#country-hazard">country–hazard network and matrix</a>.</p></details>
+        <details class="hazard-key"><summary>Location precision <span>Filled = source coordinate · hollow = country reference</span></summary><p>Only 17.1% of archive records have source coordinates, with coverage varying by hazard. An empty area is not evidence of no disasters. Country totals in the period comparison include records without coordinates. Hollow references identify countries, not event locations.</p><p>Compare hazard composition in the <a href="#period-comparison">period comparison</a> or the <a href="#country-hazard">country–hazard network and matrix</a>.</p></details>
         <p class="footnote" id="event-coverage"></p>
         <p class="footnote" id="map-coverage"></p>
       </section>
       <section class="panel ranking-panel" id="comparison" aria-labelledby="rank-title">
-        <div class="panel-heading"><div><p class="eyebrow">2) COMPARE IMPACTS</p><h2 id="rank-title">The global picture</h2></div></div>
+        <div class="panel-heading"><div><p class="eyebrow">3) COMPARE DISASTER TYPES</p><h2 id="rank-title">The global picture</h2></div></div>
         <div class="segmented" role="group" aria-label="Rank by"><button id="rank-grouped" aria-pressed="true">Disaster types (grouped)</button><button id="rank-expanded" aria-pressed="false">Disaster types (expanded)</button></div>
         <div id="ranking-range" class="year-controls local-range" data-chart="Ranking"></div>
         <div id="rank-selection" class="rank-selection" hidden><span id="rank-filter-count"></span><button id="rank-all" class="text-button">All</button><button id="rank-none" class="text-button">None</button></div>
@@ -84,53 +117,9 @@
       </section>
     </div>
 
-    <section class="panel period-panel" id="period-comparison" aria-labelledby="period-title">
-      <div class="panel-heading"><div><p class="eyebrow">3) COMPARE TWO PERIODS</p><h2 id="period-title">What changed between two periods?</h2></div></div>
-      <p class="panel-subtitle">Shared scale and zoom. Choose a measure and view; selected disaster types apply.</p>
-      <div class="period-controls">
-        <fieldset><legend>Period A</legend><label>From<select id="period-a-start" aria-label="Period A start year"></select></label><label>To<select id="period-a-end" aria-label="Period A end year"></select></label></fieldset>
-        <fieldset><legend>Period B</legend><label>From<select id="period-b-start" aria-label="Period B start year"></select></label><label>To<select id="period-b-end" aria-label="Period B end year"></select></label></fieldset>
-        <label>Measure<select id="period-metric"><option value="records">Event totals</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label>
-        <label>View<select id="period-view"><option value="countries">Country impacts</option><option value="events">Event totals (locations)</option></select></label>
-        <label>Compare<select id="period-basis"><option value="annual">Annual averages</option><option value="total">Period totals</option></select></label>
-        <button id="period-swap" class="quiet-button">Swap A / B</button><button id="period-zoom-reset" class="text-button">Reset both maps</button>
-      </div>
-      <label class="period-reference-option" id="period-reference-option" hidden><input id="period-approximate" type="checkbox"> Show approximate country references</label>
-      <p id="period-status" class="period-status" role="status"></p>
-      <div class="period-maps"><figure><figcaption id="period-a-label"></figcaption><svg id="period-map-a" viewBox="0 0 600 310" role="img" aria-label="Country totals for Period A"></svg></figure><figure><figcaption id="period-b-label"></figcaption><svg id="period-map-b" viewBox="0 0 600 310" role="img" aria-label="Country totals for Period B"></svg></figure></div>
-      <div class="period-map-tools"><span>Scroll to zoom · drag either map to pan both</span><button id="period-zoom-in" class="quiet-button" aria-label="Zoom in both comparison maps">+</button><button id="period-zoom-out" class="quiet-button" aria-label="Zoom out both comparison maps">−</button></div>
-      <div id="period-legend" class="period-legend" aria-label="Shared country scale"></div>
-      <p id="period-map-coverage" class="footnote"></p>
-      <div class="period-regions"><h3>Which region changed most?</h3><p id="period-region-note"></p><div class="table-scroll"><table><thead><tr><th>Region</th><th id="period-region-a">A</th><th id="period-region-b">B</th><th id="period-region-delta">B − A</th><th>Change (%)</th></tr></thead><tbody id="period-region-body"></tbody></table></div></div>
-      <div class="period-detail-heading"><h3>Compare impacts and hazard composition</h3><label>Place<select id="period-country" aria-label="Period comparison country"><option value="">Worldwide / filtered geography</option></select></label><p>Select a country for local details.</p></div>
-      <div class="period-details"><div><h4>Did frequency and impact move together?</h4><p id="period-impact-note"></p><div class="table-scroll"><table><thead><tr><th>Measure</th><th>A</th><th>B</th><th>B − A</th></tr></thead><tbody id="period-impact-body"></tbody></table></div></div><div><h4>Did the hazard mix change?</h4><p>Record shares · six largest types + Other.</p><div class="period-pair-key"><span><i class="period-key-a"></i>Period A</span><span><i class="period-key-b"></i>Period B</span></div><div id="period-composition"></div></div></div>
-      <p class="footnote">Reported impacts only; coverage may differ. Annual averages use all selected years. Counts are country-disaster records, not unique global events.</p>
-      <p class="period-more"><a href="#country-hazard">Explore country–hazard relationships in the network and matrix ↓</a></p>
-    </section>
-
-    <!-- Temporarily disabled: historical timeline and seasonal chart. Preserve markup for restoration.
-    <section class="panel timeline-panel" id="history" aria-labelledby="timeline-title">
-      <div class="panel-heading"><div><p class="eyebrow">FOLLOW THE TIMELINE</p><h2 id="timeline-title">How does number of disasters change over time?</h2></div>
-        <div class="year-controls"><label>From<select id="start-year" aria-label="Start year"></select></label><span> - </span><label>To<select id="end-year" aria-label="End year"></select></label><button id="all-years" class="text-button">All years</button></div></div>
-      <div class="chart-controls"><fieldset class="radio-segment" id="aggregation"><legend class="sr-only">Historical aggregation</legend>
-        <label><input type="radio" name="aggregation" value="yearly" checked><span>Yearly</span></label><label><input type="radio" name="aggregation" value="monthly"><span>Monthly</span></label>
-      </fieldset><span>These controls affect only this timeline. Use the global filter bar to change all charts.</span></div>
-      <p id="timeline-note" class="panel-subtitle"></p>
-      <svg id="timeline" viewBox="0 0 1300 260" role="img" aria-label="Annual time series"></svg>
-      <div class="brush-label"><span>DRAG THE HANDLES TO SELECT A PERIOD</span><strong id="year-range"></strong></div>
-      <svg id="brush" viewBox="0 0 1300 70" aria-label="Drag to filter years; the From and To controls provide keyboard access"></svg>
-      <p class="footnote">The main chart expands your selected period. The lower overview retains all years; its brush selects whole calendar years. Gaps indicate records with no reported values; 2026 is incomplete.</p>
-    </section>
-
-    <section class="panel extra-panel" aria-labelledby="season-title">
-      <div class="panel-heading"><div><p class="eyebrow">SEASONAL PATTERNS</p><h2 id="season-title">Average recorded disasters per calendar month</h2></div></div>
-      <div id="season-range" class="year-controls local-range" data-chart="Seasonal chart"></div>
-      <p class="panel-subtitle" id="season-note"></p><svg id="seasonal" role="img" aria-label="Average disaster records by calendar month"></svg>
-    </section>
-    -->
     <section class="panel extra-panel" aria-labelledby="stream-title">
       <div class="panel-heading"><div><p class="eyebrow">4) DISASTER COMPOSITION OVER TIME</p><h2 id="stream-title">How does the composition of disasters change over time?</h2></div></div>
-      <p class="panel-subtitle">Layer thickness = annual records. Outline = selected years. 2026 is partial.</p>
+      <p class="panel-subtitle">Explore the years between the two comparison periods. Layer thickness shows annual record counts, not deaths or damage. Outline = local selection; 2026 is partial.</p>
       <div id="stream-range" class="year-controls local-range" data-chart="Streamgraph"></div>
       <div id="stream-legend" class="chart-legend"></div><svg id="streamgraph" role="img" aria-label="Disaster type streamgraph"></svg><p id="stream-note" class="footnote"></p>
     </section>
@@ -185,6 +174,8 @@
       <div class="reading-card"><p class="eyebrow">READ THE PATTERN</p><h2 id="insight-title">Frequency is only one part of the story.</h2><p id="insight-text">Switch between records, deaths, affected populations and damage to compare different dimensions of disaster impacts.</p></div>
       <details class="reading-card" open><summary>What these numbers mean</summary><p>A record is one disaster’s impact in one country. A disaster crossing borders appears more than once. Affected totals can include the same people across multiple disasters.</p><p>Blank impacts remain unknown, absent or unreported - not automatically zero. Coverage shows the share of records with a value. Damage is inflation-adjusted to <strong>2025 US dollars</strong>; 2026 adjusted figures are unavailable.</p><p>This is a history of reported major disasters, not a forecast of risk or a comparison adjusted for population. Reporting differences affect comparisons and trends.</p></details>
     </section>
+    <p class="archive-heading">Full archive under the selected disaster-type filters / 2000-2026, including partial 2026</p>
+    <section id="stats" class="stats" aria-label="Full archive totals, independent of local year controls"></section>
     <details class="record-details"><summary>Inspect the filtered records <span id="record-count"></span></summary><p>First 100 matching records, ordered by start year and identifier. Download the full filtered selection for further analysis.</p><button id="download" class="text-button">Download filtered CSV ↓</button><div class="table-scroll"><table><thead><tr><th>Record</th><th>Year</th><th>Country</th><th>Disaster type</th><th>Deaths</th><th>Affected</th><th>Adjusted US$</th></tr></thead><tbody id="record-body"></tbody></table></div></details>
   </main>
   <footer><span>EARTH / IMPACT <span class="footer-divider">/</span> Global Disaster Risk Explorer</span><span>Source: <a href="https://public.emdat.be/">EM-DAT</a> · CRED / UCLouvain · Export 15 Sep 2026<br>Boundaries: Natural Earth / World Atlas · <a href="about.html">About the data</a> / <a href="docs/data-methods.md">Data methods</a></span></footer>

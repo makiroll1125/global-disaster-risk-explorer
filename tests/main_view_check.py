@@ -85,7 +85,8 @@ with sync_playwright() as p:
     assert page.locator('.event-mark.is-hovered').count() == 0
     labels = page.locator('main > .panel > .panel-heading .eyebrow, .main-grid .panel-heading .eyebrow').all_text_contents()
     assert [label.split(')')[0] for label in labels] == ['1','2','3','4','5','6']
-    assert labels[2] == '3) COMPARE TWO PERIODS'
+    assert labels[0] == '1) COMPARE TWO PERIODS'
+    assert labels[2] == '3) COMPARE DISASTER TYPES'
     page.locator('#map-fade-events').uncheck()
 
     # Cumulative locations survive pauses, cursor changes and inspection by default.
@@ -151,7 +152,9 @@ with sync_playwright() as p:
     assert page.locator('#period-map-a>g').get_attribute('transform') == page.locator('#period-map-b>g').get_attribute('transform')
     page.locator('#period-comparison').screenshot(path=str(ARTIFACTS / 'period-event-totals.png'), style='.masthead,.filter-bar{visibility:hidden!important}')
     assert page.locator('#ch-network .ch-edge').count() > 0
-    assert page.locator('#ch-matrix .ch-cell').count() == 80
+    assert page.locator('#ch-matrix .ch-cell').count() == (
+        page.locator('#ch-network .ch-country-node').count() * page.locator('#ch-network .ch-hazard-node').count()
+    )
     for width in [390, 320]:
         page.set_viewport_size({'width': width, 'height': 844})
         page.wait_for_timeout(250)

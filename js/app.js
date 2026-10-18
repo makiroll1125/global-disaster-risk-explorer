@@ -505,8 +505,8 @@ function renderInsight(selected) {
     $('insight-text').textContent = `None of the ${selected.length.toLocaleString()} selected records report this measure. Try another measure; missing figures do not establish zero impact.`;
   } else {
     const top = types[0];
-    $('insight-title').textContent = `${displayType(top.key)} leads this selection in ${metrics[state.metric].label.toLowerCase()}.`;
-    $('insight-text').textContent = `${valueLabel(top.value)} ${metrics[state.metric].unit}${total.value > 0 ? `, or ${d3.format('.1%')(top.value / total.value)} of the selected total` : ''}. ${state.metric === 'records' ? 'Switch to deaths or damage to see whether the most frequent hazards also have the greatest reported impacts.' : `${coverage(total)}. Differences in reporting can influence this comparison.`}`;
+    $('insight-title').textContent = 'Frequency, human impact and economic damage tell different stories.';
+    $('insight-text').textContent = `${displayType(top.key)} leads this full-archive selection with ${valueLabel(top.value)} ${metrics[state.metric].unit}${total.value > 0 ? ` (${d3.format('.1%')(top.value / total.value)})` : ''}. Return to the period comparison to compare reported deaths, affected totals and adjusted damage. The default periods show lower reported human impacts alongside higher economic damage; this does not establish future risk or explain the causes.`;
   }
 }
 function renderTable(selected) {

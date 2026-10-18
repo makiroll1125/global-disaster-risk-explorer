@@ -71,11 +71,14 @@ with sync_playwright() as playwright:
     assert page.locator('#ch-network .ch-hazard-node').count() == 1
     page.locator('#ch-hazard-selector summary').click()
     page.locator('#ch-country-selector summary').click()
-    outside_default = page.locator('#ch-country-options input:not(:checked)').first
-    outside_default.check()
+    country_options = page.locator('#ch-country-options input')
+    outside_index = country_options.evaluate_all('(inputs) => inputs.findIndex(input => !input.checked)')
+    # Keep the target stable when rendering replaces the now-checked input.
+    country_options.nth(outside_index).check()
     assert '7 countries selected' in page.locator('#ch-country-summary').inner_text()
     page.select_option('#ch-order', 'alphabetical')
     assert '7 countries selected' in page.locator('#ch-country-summary').inner_text()
+    page.locator('#ch-country-selector summary').click()
     page.click('#ch-reset')
 
     # Top 3 is explicit, reports omissions, and never changes the matrix.
@@ -92,6 +95,8 @@ with sync_playwright() as playwright:
     hidden = page.locator('#ch-network .ch-edge-hidden').first
     iso = hidden.get_attribute('data-country')
     hazard = hidden.get_attribute('data-hazard')
+    # Highlighting raises the edge, so identify it independently of SVG order.
+    hidden = page.locator(f'#ch-network .ch-edge[data-country="{iso}"][data-hazard="{hazard}"]')
     page.locator(f'#ch-matrix .ch-cell[data-country="{iso}"][data-hazard="{hazard}"]').hover()
     assert 'is-revealed' in hidden.get_attribute('class')
     assert page.locator('#ch-network .ch-edge.is-active').evaluate('(node) => getComputedStyle(node).strokeOpacity') == '1'
@@ -116,27 +121,27 @@ with sync_playwright() as playwright:
     assert page.locator(f'#ch-matrix .ch-row-label[data-country="{second_iso}"]').get_attribute('class').find('is-country-active') >= 0
     assert 'profile similarity' in page.locator('#ch-details').inner_text()
 
-    assert page.locator('#ch-matrix .ch-matrix-legend').inner_text().find('record count') >= 0
+    assert page.locator('#ch-matrix .ch-matrix-legend').text_content().find('record count') >= 0
     page.select_option('#ch-order', 'similarity')
     assert 'average-linkage hierarchical clustering' in page.locator('#country-hazard .footnote').inner_text()
 
     page.click('#ch-poster-open')
     assert page.locator('#ch-poster-dialog').is_visible()
     assert page.locator('#ch-poster-svg').get_attribute('viewBox').startswith('0 0 ')
-    assert 'current explorer selection' in page.locator('#ch-poster-svg').inner_text()
-    assert 'exact matching record counts' in page.locator('#ch-poster-svg').inner_text()
+    assert 'current explorer selection' in page.locator('#ch-poster-svg').text_content()
+    assert 'exact matching record counts' in page.locator('#ch-poster-svg').text_content()
     assert page.locator('#ch-poster-svg path').count() == page.locator('#ch-matrix .ch-cell:not(.ch-zero-cell)').count()
     assert page.locator('#ch-poster-svg path').evaluate_all(
         '(nodes) => nodes.every(node => node.getAttribute("stroke-opacity") === "0.4")'
     )
-    assert 'All ' in page.locator('#ch-poster-svg').inner_text()
-    assert 'positive-count relationships are shown' in page.locator('#ch-poster-svg').inner_text()
+    assert 'All ' in page.locator('#ch-poster-svg').text_content()
+    assert 'positive-count relationships are shown' in page.locator('#ch-poster-svg').text_content()
     page.click('#ch-poster-close')
 
     page.select_option('#ch-edge-limit', '3')
     page.click('#ch-poster-open')
-    assert 'TOP 3 CONNECTIONS PER COUNTRY' in page.locator('#ch-poster-svg').inner_text()
-    assert 'explicit network filter omits' in page.locator('#ch-poster-svg').inner_text()
+    assert 'TOP 3 CONNECTIONS PER COUNTRY' in page.locator('#ch-poster-svg').text_content()
+    assert 'explicit network filter omits' in page.locator('#ch-poster-svg').text_content()
     assert page.locator('#ch-poster-svg path').count() < page.locator('#ch-matrix .ch-cell:not(.ch-zero-cell)').count()
     page.click('#ch-poster-close')
 

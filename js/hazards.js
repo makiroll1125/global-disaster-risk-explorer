@@ -14,7 +14,7 @@ export const hazardColors = {
 };
 
 // Plain-language summaries; sources and distinctions from EM-DAT classifications
-// are documented in docs/hazard-encoding.md. These do not reclassify source rows.
+// are documented in docs/data-methods.md. These do not reclassify source rows.
 export const hazardDescriptions = {
   'Earthquake': 'Ground shaking caused by a sudden movement along a fault in the Earth’s crust.',
   'Tsunami': 'Large waves caused by a sudden displacement of water, often from an underwater earthquake.',
