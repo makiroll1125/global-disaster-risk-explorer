@@ -44,6 +44,7 @@ with sync_playwright() as p:
     assert page.locator('#type option.generated:not([disabled])').count() == 34
     assert page.locator('#type option[value="Sinkhole"]').evaluate('(n) => n.disabled')
     assert page.locator('#type option[value="Firestorm"]').evaluate('(n) => n.disabled')
+    page.locator('[name="map-encoding"][value="events"]').check()
     page.locator('#map-clusters').uncheck()
     assert page.locator('.event-pin.located').count() == 1864
     page.locator('#map-approximate').uncheck()
@@ -65,8 +66,8 @@ with sync_playwright() as p:
     page.click('#map-play')
     page.wait_for_selector('.event-pulse')
     assert page.locator('.event-pin[data-id="2011-0082-JPN"]').count() == 1
-    assert page.locator('.event-pulse').first.get_attribute('stroke') == '#1677c8'
-    assert page.locator('.event-tick').first.get_attribute('fill') == '#1677c8'
+    assert page.locator('.event-pulse').first.get_attribute('stroke') == '#167c75'
+    assert page.locator('.event-tick').first.get_attribute('fill') == '#167c75'
     page.wait_for_timeout(450)
     pulse = page.locator('.event-pulse').first
     radius = pulse.evaluate('(node) => +node.getAttribute("r") * node.getScreenCTM().a')

@@ -13,7 +13,7 @@ export class MapExplorer {
   constructor(map, allRows, onChange, onInspect) {
     Object.assign(this, { map, allRows, onChange, onInspect });
     this.selection = { area: null, country: '', interval: null };
-    this.sizeMetric = 'equal'; this.grouping = true; this.page = 0; this.focusIds = null; this.highlightEvent = '';
+    this.sizeMetric = 'equal'; this.grouping = false; this.page = 0; this.focusIds = null; this.highlightEvent = '';
     this.maxima = Object.fromEntries(Object.keys(metricNames).map(key => [key, d3.max(allRows, r => r[key]) || 1]));
     this.byId = new Map(allRows.map(row => [row.id, row]));
     this.byEvent = d3.group(allRows, row => row.event_id);
@@ -65,7 +65,7 @@ export class MapExplorer {
       $(id).min = isoDate(this.bounds[0]); $(id).max = isoDate(this.bounds[1]); $(id).value = isoDate(value);
     }
     $('map-local-country').value = this.selection.country;
-    this.spatialCache = selectMapItems(items, { ...this.selection, interval: null }, { approximate: state.approximate, cutoff });
+    this.spatialCache = selectMapItems(items, { ...this.selection, interval: null }, { approximate: state.encoding === 'choropleth' || state.approximate, cutoff });
     this.timelineAll = selectMapItems(items, { ...this.selection, interval: null }, { approximate: true, cutoff });
     this.timelineScope = selectMapItems(items, this.selection, { approximate: true, cutoff });
     this.timelineDated = this.timelineScope.filter(d => d.day !== null && d.day <= cutoff).sort((a, b) => a.day - b.day);
@@ -90,7 +90,7 @@ export class MapExplorer {
   setArea(area) { this.selection.area = area; this.selection.country = ''; this.changed(); }
   clearSpatial() { this.selection.area = null; this.selection.country = ''; this.changed(); }
   select(items, replay = true) {
-    return selectMapItems(items, this.selection, { approximate: this.state.approximate,
+    return selectMapItems(items, this.selection, { approximate: this.state.encoding === 'choropleth' || this.state.approximate,
       replay: replay && this.state.mode === 'timeline' ? this.state : null, cutoff: this.cutoff });
   }
   spatialItems() {
@@ -110,7 +110,7 @@ export class MapExplorer {
     const undated = this.spatialItems().filter(d => d.day === null).length;
     const future = this.spatialItems().filter(d => d.day !== null && d.day > this.cutoff).length;
     const country = this.selection.country && this.allRows.find(r => r.iso === this.selection.country)?.country;
-    this.message(`${country || (this.selection.area ? 'Selected area · source coordinates only' : 'All locations')} · ${this.selection.interval ? this.selection.interval.map(isoDate).join(' to ') : 'Full map period'} · ${mapped.toLocaleString()} placeable / ${rows.length.toLocaleString()} selected records. ${undated.toLocaleString()} records in the spatial scope lack a complete valid start date${this.selection.interval || this.state.mode === 'timeline' ? ' and are excluded by date selection or replay' : '; included in full-period totals'}.${future ? ` ${future} source start date${future === 1 ? ' is' : 's are'} after the export cutoff; retained only in full-period totals.` : ''}`);
+    this.message(`${country || (this.selection.area ? 'Selected area · source coordinates only' : 'All countries')} · ${this.selection.interval ? this.selection.interval.map(isoDate).join(' to ') : 'Full map period'} · ${this.state.encoding === 'choropleth' ? `${rows.length.toLocaleString()} country records, including those without event coordinates` : `${mapped.toLocaleString()} placeable / ${rows.length.toLocaleString()} selected records`}. ${undated.toLocaleString()} records in the spatial scope lack a complete valid start date${this.selection.interval || this.state.mode === 'timeline' ? ' and are excluded by date selection or replay' : '; included in full-period totals'}.${future ? ` ${future} source start date${future === 1 ? ' is' : 's are'} after the export cutoff; retained only in full-period totals.` : ''}`);
     const cards = [
       ['Country records', { value: rows.length, reported: rows.length, count: rows.length }],
       ['Distinct event IDs', { value: new Set(rows.map(r => r.event_id)).size, reported: rows.length, count: rows.length }],
@@ -128,7 +128,7 @@ export class MapExplorer {
     bars.each(function(d) {
       this.replaceChildren(); const label = document.createElement('span'); label.textContent = d.key;
       const count = document.createElement('strong'); count.textContent = d.value.toLocaleString();
-      const bar = document.createElement('i'); bar.style.width = 100 * d.value / Math.max(1, rows.length) + '%'; bar.style.background = hazardColors[d.key];
+      const bar = document.createElement('i'); bar.style.width = 100 * d.value / Math.max(1, rows.length) + '%'; bar.style.background = '#167c75';
       this.append(label, count, bar);
     });
     d3.select('#map-selection-composition').selectAll('p').data(types.length ? [] : [null]).join('p').text('No records match this selection.');
@@ -210,18 +210,14 @@ export class MapExplorer {
     const svg = d3.select('#selection-timeline').attr('viewBox', `0 0 ${width} 100`); svg.selectAll('*').remove();
     const scale = d3.scaleUtc().domain(this.bounds.map(d => new Date(d))).range([15, width - 15]);
     const monthly = this.bounds[1] - this.bounds[0] > 2 * 366 * DAY;
-    const bins = d3.rollups(dated, r => r.length, d => monthly ? Date.UTC(d.row.year, d.row.start_month - 1, 1) : d.day, d => d.row.type);
-    const max = d3.max(bins, ([, types]) => d3.sum(types, ([, count]) => count)) || 1;
-    for (const [date, types] of bins) {
-      let y = 67;
-      for (const [type, count] of types) {
+    const bins = d3.rollups(dated, r => r.length, d => monthly ? Date.UTC(d.row.year, d.row.start_month - 1, 1) : d.day);
+    const max = d3.max(bins, ([, count]) => count) || 1;
+    for (const [date, count] of bins) {
         const height = 45 * count / max;
-        svg.append('rect').attr('x', scale(date)).attr('y', y - height).attr('width', Math.max(1, scale(Math.min(this.bounds[1], date + (monthly ? 28 : 1) * DAY)) - scale(date))).attr('height', Math.max(.5, height)).attr('fill', hazardColors[type]);
-        y -= height;
-      }
+        svg.append('rect').attr('x', scale(date)).attr('y', 67 - height).attr('width', Math.max(1, scale(Math.min(this.bounds[1], date + (monthly ? 28 : 1) * DAY)) - scale(date))).attr('height', Math.max(.5, height)).attr('fill', '#167c75');
     }
     svg.append('g').attr('class', 'axis').attr('transform', 'translate(0,70)').call(d3.axisBottom(scale).ticks(Math.max(2, Math.floor(width / 85))).tickSize(0));
-    svg.append('text').attr('x', 15).attr('y', 12).attr('font-size', 9).attr('fill', '#60747b').text(`${dated.length.toLocaleString()} fully dated records · ${monthly ? 'monthly' : 'daily'} bins · ${this.state.approximate ? 'full spatial context' : 'includes records hidden by location toggle'}`);
+    svg.append('text').attr('x', 15).attr('y', 12).attr('font-size', 9).attr('fill', '#60747b').text(`${dated.length.toLocaleString()} fully dated records · ${monthly ? 'monthly' : 'daily'} bins · ${this.state.encoding === 'choropleth' || this.state.approximate ? 'full country context' : 'includes records hidden by location toggle'}`);
     const brush = d3.brushX().extent([[15, 18], [width - 15, 68]]).on('end', event => {
       if (!event.sourceEvent) return;
       if (!event.selection || event.selection[1] - event.selection[0] < 3) this.selection.interval = null;

@@ -5,6 +5,7 @@ import { hazardColors, hazardDescriptions, hazardType, DAY } from './hazards.js'
 import { EventMap } from './event-map.js';
 import { nextReplayDate, upperBound, advanceReplayDate } from './map-analysis.js';
 import { CountryHazardExplorer } from './country-hazard.js';
+import { PeriodComparison } from './period-comparison.js';
 
 const $ = id => document.getElementById(id);
 const d3 = window.d3;
@@ -16,6 +17,7 @@ const historyFilters = () => ({ ...state, ...historyState });
 let playbackTimer;
 let eventMap;
 let countryHazardExplorer;
+let periodComparison;
 let mapColor, lastCountryPaint = 0;
 let syncFilterMenus = () => {};
 const cutoffDate = () => Date.parse(metadata.reporting_cutoff + 'T00:00:00Z');
@@ -101,7 +103,10 @@ function setup() {
     stopPlayback(); mapState.mode = radio.value; renderMap({ alignReplay: radio.value === 'timeline' });
   };
   for (const radio of document.querySelectorAll('[name="map-encoding"]')) radio.onchange = () => {
-    eventMap.enableAreaSelection(false); mapState.encoding = radio.value; renderMap();
+    stopPlayback(); eventMap.enableAreaSelection(false); mapState.encoding = radio.value;
+    // Geographic rectangles only have meaning for supplied event coordinates.
+    if (radio.value === 'choropleth') eventMap.explorer.selection.area = null;
+    renderMap();
   };
   $('rank-all').onclick = () => selectHazards(null);
   $('rank-none').onclick = () => selectHazards([]);
@@ -146,6 +151,7 @@ function setup() {
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { if (eventMap.areaSelecting) eventMap.enableAreaSelection(false); else setMapExpanded(false); } });
   syncFilterMenus = setupFilterMenus({ showTip, hideTip });
   countryHazardExplorer = new CountryHazardExplorer({ rows, metadata, colors: hazardColors, showTip, hideTip });
+  periodComparison = new PeriodComparison({ rows, metadata, features, countryNames, showTip, hideTip });
   setupStickyFilters(); setupMap(); setupBrush(); render();
   let resizeTimer;
   window.addEventListener('resize', () => {
@@ -155,9 +161,9 @@ function setup() {
 }
 function resetLocalStates() {
   historyState = { ...timeBounds, aggregation: 'yearly' };
-  mapState = { ...timeBounds, year: timeBounds.start, date: Date.UTC(timeBounds.start, 0, 1), mode: 'period', encoding: 'events', playing: false, speed: 12000, country: '', approximate: true, skipQuiet: false, lastJumpDays: 0 };
+  mapState = { ...timeBounds, year: timeBounds.start, date: Date.UTC(timeBounds.start, 0, 1), mode: 'period', encoding: 'choropleth', playing: false, speed: 12000, country: '', approximate: false, skipQuiet: false, lastJumpDays: 0 };
   treeState = { ...timeBounds, region: '', country: '', type: '' };
-  rankingState = { ...timeBounds, rankBy: 'country', country: '', type: '' };
+  rankingState = { ...timeBounds, rankBy: 'type', country: '', type: '' };
   seasonState = { ...timeBounds };
   streamState = { ...timeBounds, type: '' };
 }
@@ -277,7 +283,7 @@ function updateReplayGuidance() {
   $('map-next-recorded').disabled = !days.length;
   $('map-next-recorded').textContent = next === null ? 'First recorded start' : 'Next recorded start';
   $('map-skip-quiet').checked = mapState.skipQuiet;
-  const hiddenReferences = !mapState.approximate && explorer.referenceDates;
+  const hiddenReferences = mapState.encoding === 'events' && !mapState.approximate && explorer.referenceDates;
   $('map-show-references').hidden = !hiddenReferences;
   $('map-clear-replay-selection').hidden = !(explorer.selection.area || explorer.selection.country || explorer.selection.interval);
   let message;
@@ -286,7 +292,7 @@ function updateReplayGuidance() {
   else {
     message = `${dated.length.toLocaleString()} dated records across ${days.length.toLocaleString()} recorded dates in the selected period · ${throughDate.toLocaleString()} through the current date. `;
     if (!throughDate) message += `No starts yet. Jump to ${d3.utcFormat('%d %b %Y')(days[0])} with the recorded-start button. `;
-    message += `1 year / ${mapState.speed / 1000} ${mapState.speed === 1000 ? 'second' : 'seconds'}. Markers fade after 2.5 seconds.`;
+    message += `1 year / ${mapState.speed / 1000} ${mapState.speed === 1000 ? 'second' : 'seconds'}. ${mapState.encoding === 'events' ? 'Markers fade after 2.5 seconds.' : 'Country shading accumulates starts; compare two fixed periods below for persistent differences.'}`;
     if (mapState.skipQuiet) message += ' Quiet gaps are skipped; elapsed years are compressed.';
   }
   if (hiddenReferences) message += ' Records without source coordinates remain in the timeline; show country references to place those with mapped countries.';
@@ -364,8 +370,12 @@ function renderMap({ alignReplay = false } = {}) {
   const impacts = mapState.encoding === 'choropleth';
   $('geography').dataset.encoding = mapState.encoding;
   document.querySelector(`[name="map-encoding"][value="${mapState.encoding}"]`).checked = true;
-  $('map-encoding-note').textContent = impacts ? 'Country color shows the selected impact measure' : 'Color identifies disaster type';
-  $('map').setAttribute('aria-label', impacts ? 'Choropleth of reported country disaster impacts' : 'Disaster locations colored by hazard type on a neutral world map');
+  $('map-encoding-note').textContent = impacts ? 'Country shading shows the selected measure' : 'Filled = source coordinate · hollow = approximate reference';
+  const located = rangeContext.filter(r => Number.isFinite(r.latitude) && Number.isFinite(r.longitude)).length;
+  $('map-precision-note').textContent = impacts
+    ? `Country totals include all ${rangeContext.length.toLocaleString()} matching records, with or without event coordinates. Hazard composition is available in the period comparison and country–hazard matrix.`
+    : `Only ${located.toLocaleString()} / ${rangeContext.length.toLocaleString()} matching records have source coordinates. Only these are placed by default. Optional hollow gray country references are not event locations; source coordinates have not been independently verified here.`;
+  $('map').setAttribute('aria-label', impacts ? 'Choropleth of reported country disaster impacts, including records without event coordinates' : 'Source event coordinates in teal; optional approximate country references in hollow gray');
   const period = animated ? String(mapState.year) + (mapState.year === metadata.partial_year ? ' · partial year' : '') : `${mapState.start}–${mapState.end}`;
   document.querySelector(`[name="map-mode"][value="${mapState.mode}"]`).checked = true;
   $('map-start-year').value = mapState.start; $('map-end-year').value = mapState.end; $('playback').hidden = !animated;
@@ -380,7 +390,7 @@ function renderMap({ alignReplay = false } = {}) {
   const summaries = new Map(groupSummary(context, 'iso', state.metric).map(d => [d.key, d]));
   // Cumulative replay uses a fixed domain from full-period country totals.
   const max = d3.max(animated ? groupSummary(rangeContext, 'iso', state.metric) : [...summaries.values()], d => d.value) || 1;
-  const color = d3.scaleSequentialSqrt(d3.interpolateRgbBasis(['#d5eeea', '#59ada7', '#086b70', '#14364e'])).domain([0, max]);
+  const color = d3.scaleSequentialSqrt(d3.interpolateRgb('#e2f0ed', '#096e69')).domain([0, max]);
   mapColor = color;
   countries.interrupt();
   const colored = animated ? countries.transition().duration(motion()) : countries;
@@ -423,10 +433,10 @@ function renderMap({ alignReplay = false } = {}) {
     empty.textContent = context.length ? 'No reported values for the selected measure' : 'No records match these filters';
     legend.append(empty, extra);
   }
-  legend.setAttribute('aria-label', 'Country shading: reported impact totals. Event markers use disaster colors.');
+  legend.setAttribute('aria-label', 'Country shading: selected reported measure on a square-root scale.');
   const mapIds = new Set(features.map(f => f.id));
   const unmapped = context.filter(r => !mapIds.has(r.map_id));
-  $('map-coverage').textContent = impacts ? `${unmapped.length.toLocaleString()} selected records lack map polygons; retained in selection totals. ${animated ? 'Country shading shows records accumulated through the replay date; the scale is fixed across playback years.' : 'Colors rescale with filters.'} Country totals are not adjusted for population.` : 'Countries share a neutral fill. Color identifies disaster type. Numbered groups count records; select a group to inspect them or ungroup to compare individual impacts.';
+  $('map-coverage').textContent = impacts ? `${unmapped.length.toLocaleString()} selected records lack map polygons; retained in selection totals. ${animated ? 'Country shading shows records accumulated through the replay date; the scale is fixed across playback years.' : 'Shading rescales with filters. Use the period comparison for a shared scale across two periods.'} Country totals are not adjusted for population.` : 'Teal marks indicate supplied source coordinates. Optional hollow gray marks are country references. Groups use one outline and a record count; inspect composition in the record list, period comparison, or country–hazard matrix.';
   fitExpandedMap();
 }
 
@@ -616,6 +626,7 @@ function render({ alignReplay = false } = {}) {
   $('scope').textContent = `${state.country ? countryNames.get(state.country) : state.region || 'Worldwide'} / ${typeLabel(state)} / Global scope · all years ${timeBounds.start}–${timeBounds.end} · ${selected.length.toLocaleString()} records`;
   renderStats(selected); renderMap({ alignReplay }); renderRanking(); renderTimeline(); renderInsight(selected); renderTable(selected);
   renderExtraCharts({ rows, state, seasonState, streamState, treeState, defaults: timeBounds, metadata, typeColor, showTip, hideTip, accessibleClick, countryNames });
+  periodComparison.update(state);
   countryHazardExplorer.update(selected, state);
   document.body.dataset.ready = 'true';
 }

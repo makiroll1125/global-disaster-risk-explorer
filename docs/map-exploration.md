@@ -1,6 +1,6 @@
 # Coordinated map exploration
 
-Geographic Overview now combines zoom-aware grouping, local spatial/time selection, proportional event symbols, and persistent source-record inspection. The default map keeps a neutral background; the optional choropleth remains separate from event-marker colors.
+Geographic Overview now combines zoom-aware grouping, local spatial/time selection, proportional event symbols, and persistent source-record inspection. The default Country totals choropleth includes records without coordinates. Event locations is secondary, with teal source-coordinate pins and optional hollow gray country references. The [two-period comparison](period-comparison.md) provides persistent maps, regional changes and country impact/composition details.
 
 ## Explore a subset
 
@@ -26,15 +26,15 @@ Both timelines retain fully dated records even when country-reference markers ar
 
 Source coordinates and approximate country references never enter the same geographic group. Area selections exclude approximate records even if their country reference point happens to lie in the rectangle. Country selection is the explicit alternative for including those records.
 
-The default scope contains 10,896 source rows, of which 10,636 can be placed using a coordinate or available country reference. The selection summary, composition and list retain unplaceable records. The status line explicitly distinguishes placeable and selected counts. Disabling references limits the selection to source-located records.
+The default scope contains 10,896 source rows, of which 10,636 can be placed using a coordinate or available country reference. The selection summary, composition and list retain unplaceable records. The status line explicitly distinguishes placeable and selected counts. In Event locations, disabling references limits the selection to source-located records. Country totals always includes records without event coordinates, regardless of that secondary-mode toggle.
 
 Missing/invalid start days remain excluded from date refinements and replay. Full-period totals restore them. Source dates after the export cutoff remain in full-period totals, with an explicit status note, and are excluded from brushed dates and replay. The detail panel preserves year-only and month-only precision and flags post-export starts.
 
 ## Group overlapping marks
 
-**Group overlaps** is enabled by default. At the current zoom, source coordinates group into a screen-space grid with 44px cells; zooming changes this grouping while preserving membership totals. This is display aggregation, not a geographic-distance or statistical cluster analysis. Points at identical coordinates may remain grouped at maximum zoom.
+**Group overlaps** is off by default and is available in Event locations. At the current zoom, source coordinates group into a screen-space grid with 44px cells; zooming changes this grouping while preserving membership totals. This is display aggregation, not a geographic-distance or statistical cluster analysis. Points at identical coordinates may remain grouped at maximum zoom.
 
-Approximate records group by country, independently of the coordinate grid. Numbered badges have a constant radius; their counts refer to country-disaster records. Colored ring segments show the group's hazard composition. Approximate badges use a dashed inner border. Source clusters are drawn above approximate groups. Some marks can still overlap, especially across location-precision groups; the searchable list provides access to every selected record without targeting a small mark.
+Approximate records group by country, independently of the coordinate grid. Numbered badges have a constant radius; their counts refer to country-disaster records. A single outline replaces hazard-composition rings; composition is available in the record list, period comparison and country?hazard matrix. Approximate badges use a dashed inner border. Source clusters are drawn above approximate groups. Some marks can still overlap, especially across location-precision groups; the searchable list provides access to every selected record without targeting a small mark.
 
 Click a group to focus the record list on its members. **Zoom into group** refines the source-coordinate view while keeping the original group list available. Approximate country groups do not offer geographic drill-down. **All selected records** clears group focus. Toggling grouping changes the display, not selection counts or reported impacts.
 
@@ -44,7 +44,7 @@ Click a group to focus the record list on its members. **Zoom into group** refin
 
 Reported zero uses a diamond; missing values use a cross. They never substitute for each other. Positive exact locations have filled circles; positive approximate references have hollow circles. The detail panel always states location precision regardless of mark shape. Pulses retain their one-second duration and 38px radius and represent recorded starts rather than impact extent.
 
-Numbered groups continue to encode counts and composition, not impact sums. Their legend explicitly recommends ungrouping to compare every individual impact symbol. Selection impact cards show reported sums with reporting coverage; missing totals remain Not reported when no selected record reports a value.
+Numbered groups encode record counts, not impact sums. Their legend explicitly recommends ungrouping to compare every individual impact symbol. Selection impact cards show reported sums with reporting coverage; missing totals remain Not reported when no selected record reports a value.
 
 ## Inspect source records
 

@@ -50,6 +50,9 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto('http://127.0.0.1:8000')
     page.wait_for_selector('body[data-ready="true"]')
+    page.locator('[name="map-encoding"][value="events"]').check()
+    page.locator('#map-approximate').check()
+    page.locator('#map-clusters').check()
     page.locator('[name="map-mode"][value="timeline"]').check()
 
     # The animated timeline must expose every Tsunami row, not just the Peru start

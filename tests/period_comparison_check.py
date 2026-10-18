@@ -1,0 +1,138 @@
+"""Country-first overview and source-backed comparisons. Serve the project on :8000."""
+from pathlib import Path
+import json
+import os
+import platform
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parents[1]
+ROWS = json.loads((ROOT / 'data/processed/disasters.json').read_text(encoding='utf-8'))['records']
+ARTIFACTS = ROOT / 'tests/artifacts'
+ARTIFACTS.mkdir(exist_ok=True)
+
+with sync_playwright() as p:
+    chrome = os.environ.get('CHROME_PATH') or ('C:/Program Files/Google/Chrome/Application/chrome.exe' if platform.system() == 'Windows' else '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' if platform.system() == 'Darwin' else None)
+    browser = p.chromium.launch(**({'executable_path': chrome} if chrome else {}), headless=True)
+    page = browser.new_page(viewport={'width': 1440, 'height': 1100}, reduced_motion='reduce')
+    page.set_default_timeout(12000)
+    errors = []
+    page.on('pageerror', lambda error: errors.append(str(error)))
+    page.goto('http://127.0.0.1:8000')
+    page.wait_for_selector('body[data-ready="true"]')
+    assert page.locator('[name="map-encoding"][value="choropleth"]').is_checked()
+    assert not page.locator('#map-clusters').is_checked()
+    assert not page.locator('#map-approximate').is_checked()
+    assert page.locator('#rank-type').get_attribute('aria-pressed') == 'true'
+    assert page.locator('#map').get_attribute('data-selected-records') == str(len(ROWS))
+    assert page.locator('.event-pin,.event-cluster').count() == 0
+    assert page.locator('.map-analysis-tools').is_hidden()
+    assert page.locator('#map-size-legend').is_hidden()
+    assert len(set(page.locator('#map .country').evaluate_all('(nodes) => nodes.map(n => n.getAttribute("fill"))'))) > 3
+    page.locator('#geography').screenshot(path=str(ARTIFACTS / 'country-overview.png'))
+
+    # The second mode defaults to source coordinates only. Country totals never
+    # inherit that coordinate-completeness filter.
+    page.locator('[name="map-encoding"][value="events"]').check()
+    assert page.locator('.event-pin.located').count() == 1864
+    assert page.locator('.event-pin.approximate').count() == 0
+    assert set(page.locator('.event-pin').evaluate_all('(nodes) => nodes.map(n => n.getAttribute("fill"))')) == {'#167c75'}
+    page.locator('#map-clusters').check()
+    assert page.locator('.event-cluster').count() > 0
+    assert page.locator('.event-cluster path').count() == 0
+    page.locator('#map-approximate').check()
+    assert page.locator('.event-cluster.approximate').count() > 0
+    page.locator('#map-approximate').uncheck()
+    page.locator('[name="map-encoding"][value="choropleth"]').check()
+    assert page.locator('#map').get_attribute('data-selected-records') == str(len(ROWS))
+
+    # Same color domain for both periods; verify against independent Python sums.
+    ranges = {key: (int(page.input_value(f'#period-{key}-start')), int(page.input_value(f'#period-{key}-end'))) for key in ['a', 'b']}
+    assert ranges == {'a': (2006, 2015), 'b': (2016, 2025)}
+    maxima = []
+    for start, end in ranges.values():
+        counts = {}
+        for row in ROWS:
+            if start <= row['year'] <= end:
+                counts[row['iso']] = counts.get(row['iso'], 0) + 1
+        maxima.append(max(counts.values()) / (end - start + 1))
+    for key in ['a', 'b']:
+        assert float(page.locator(f'#period-map-{key}').get_attribute('data-scale-max')) == max(maxima)
+    page.click('#period-zoom-in')
+    transforms = [page.locator(f'#period-map-{key}>g').get_attribute('transform') for key in ['a', 'b']]
+    assert transforms[0] == transforms[1] and '1.4' in transforms[0]
+    page.locator('#period-map-b').scroll_into_view_if_needed()
+    box = page.locator('#period-map-b').bounding_box()
+    page.mouse.move(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+    page.mouse.down()
+    page.mouse.move(box['x'] + box['width'] / 2 + 40, box['y'] + box['height'] / 2 + 10, steps=4)
+    page.mouse.up()
+    assert page.locator('#period-map-a>g').get_attribute('transform') == page.locator('#period-map-b>g').get_attribute('transform')
+    page.click('#period-zoom-reset')
+    page.locator('#period-map-a .period-country[data-iso="IND"]').focus()
+    page.keyboard.press('Enter')
+    assert page.input_value('#period-country') == 'IND'
+    page.locator('#period-map-b .period-country[data-iso="JPN"]').focus()
+    page.keyboard.press('Enter')
+    assert page.input_value('#period-country') == 'JPN'
+    # Countries without polygons still have complete record-based detail access.
+    page.select_option('#period-country', 'GUM')
+    expected = sum(row['iso'] == 'GUM' and 2006 <= row['year'] <= 2015 for row in ROWS) / 10
+    assert page.locator('#period-impact-body tr[data-metric="records"] td').first.inner_text() == f'{expected:,.1f}'
+    page.select_option('#period-country', 'JPN')
+    for key in ['a', 'b']:
+        assert page.locator(f'#period-map-{key} .period-country[data-iso="JPN"]').get_attribute('aria-pressed') == 'true'
+    for metric in ['records', 'deaths', 'affected', 'damage_adjusted_usd']:
+        tr = page.locator(f'#period-impact-body tr[data-metric="{metric}"]')
+        for index, key in enumerate(['a', 'b']):
+            start, end = ranges[key]
+            rows = [row for row in ROWS if row['iso'] == 'JPN' and start <= row['year'] <= end]
+            value = len(rows) if metric == 'records' else sum(row[metric] for row in rows if row[metric] is not None)
+            expected = f'{value / (end - start + 1):,.1f}'
+            assert expected in tr.locator('td').nth(index).inner_text(), (metric, key, expected)
+    page.locator('#period-comparison').screenshot(path=str(ARTIFACTS / 'period-comparison-desktop.png'))
+
+    # Annual average and total differ only by the selected calendar-year count.
+    page.select_option('#period-basis', 'total')
+    expected = sum(row['iso'] == 'JPN' and 2006 <= row['year'] <= 2015 for row in ROWS)
+    assert page.locator('#period-impact-body tr[data-metric="records"] td').first.inner_text() == f'{expected:,}'
+    page.click('#period-swap')
+    assert page.input_value('#period-a-start') == '2016'
+    assert page.input_value('#period-b-start') == '2006'
+    assert '2016–2025' in page.locator('#period-impact-note').inner_text()
+
+    # No adjusted damage in partial 2026: hatch unknowns, never infer zero or a decline.
+    page.click('#metric-menu-button')
+    page.locator('#metric-menu [data-value="damage_adjusted_usd"]').click()
+    page.select_option('#period-b-start', '2026')
+    assert page.input_value('#period-b-end') == '2026'
+    assert 'Caution: 2026 is partial' in page.locator('#period-status').inner_text()
+    fills = page.locator('#period-map-b .period-country').evaluate_all('(nodes) => nodes.map(n => n.getAttribute("fill"))')
+    assert any(fill.startswith('url(') for fill in fills)
+    assert 'Not reported' in page.locator('#period-impact-body tr[data-metric="damage_adjusted_usd"]').inner_text()
+
+    page.click('#type-menu-button')
+    page.locator('#type-menu').get_by_role('button', name='None', exact=True).click()
+    page.locator('#type-menu [data-value="Epidemic"] input').check()
+    page.keyboard.press('Escape')
+    assert 'No reported country values' in page.locator('#period-legend').inner_text()
+    assert page.locator('#period-legend .legend-ramp').count() == 0
+
+    # Empty filters clear prior data and retain usable controls.
+    page.click('#type-menu-button')
+    page.locator('#type-menu').get_by_role('button', name='None', exact=True).click()
+    page.keyboard.press('Escape')
+    assert 'No records match' in page.locator('#period-status').inner_text()
+    assert 'No records in either' in page.locator('#period-composition').inner_text()
+    assert 'No regions match' in page.locator('#period-region-body').inner_text()
+    page.click('#reset')
+    assert page.locator('#ch-network .ch-edge').count() > 0
+    assert page.locator('#ch-matrix .ch-cell').count() > 0
+    page.set_viewport_size({'width': 390, 'height': 844})
+    page.wait_for_timeout(300)
+    assert not page.evaluate('document.documentElement.scrollWidth > innerWidth')
+    left, right = [page.locator(f'#period-map-{key}').bounding_box() for key in ['a', 'b']]
+    assert right['y'] > left['y'] + left['height']
+    page.locator('#period-comparison').screenshot(path=str(ARTIFACTS / 'period-comparison-mobile.png'))
+    assert not errors, errors
+    browser.close()
+    print('PASS: country-first defaults, coordinate precision, single-color markers/groups, shared map scale and zoom, source-backed period impacts, partial-year/unknown/empty states, network/matrix retained, mobile layout.')

@@ -14,18 +14,19 @@ Open **http://127.0.0.1:8000**. Stop the server with Ctrl+C. A local HTTP server
 
 ## Explore
 
-- Explore disaster locations on a neutral world map; zoom, pan, or highlight a country. Switch to **Country impacts** for a separate choropleth without event markers.
+- Start with **Country totals**: a single teal shading scale aggregates every matching record by country, including records without event coordinates. Switch to **Event locations** for source coordinates; approximate hollow gray country references are hidden by default and explicitly labeled as non-event locations.
+- **Compare two periods** uses synchronized country maps with one shared square-root scale. Defaults compare 2006–2015 with 2016–2025, excluding partial 2026. Annual averages accommodate different period lengths; period totals are also available. Regional changes, country impact/coverage tables, and paired composition bars answer comparison questions without animation. See [comparison methods](docs/period-comparison.md).
 - Toggle each disaster type independently: from All, a click excludes only that type. Use None to build a smaller subset. Hover or focus a type for a short explanation; [hazard colors and terminology](docs/hazard-encoding.md) documents the palette and sources.
 - Switch between records, reported deaths, affected populations and adjusted damage.
 - Combine any of 34 hazard categories using the **Disaster types** checkbox menu, including tsunami, avalanche, hurricane/typhoon, tornado, heatwave, blizzard, hailstorm and duststorm. Search, All and None make larger selections manageable.
-- Compare country or hazard rankings in a fixed-height scroll area. Country bars highlight locally; disaster bars select a combination of hazards across the map and linked views. The full type ranking stays available for comparison while filtering.
+- The ranking opens on **Disaster types** in a fixed-height scroll area. Country bars highlight locally; disaster bars select a combination of hazards across the map and linked views. The full type ranking stays available for comparison while filtering.
 - Drag the timeline brush handles or use year selectors to zoom the detail chart; switch between yearly and monthly resolution.
-- Set the map’s From/To years, select **Animated timeline**, then **Play** to replay daily recorded starts. Pins and one-second expanding rings share each hazard’s color with the daily event timeline and type rankings. In Country impacts mode, replay shading shows records accumulated through the current date on a fixed scale.
+- Set the map’s From/To years, select **Replay starts**, then **Play** to replay daily recorded starts. Event pins, optional pulses and the start-count histogram use one teal color. In Country totals mode, shading shows records accumulated through the current date on a fixed scale. Use the two-period comparison for analytical changes rather than remembering playback frames.
 - Playback advances one year in **4s (Fast)**, **12s (Normal)** or **24s (Slow)**. Animated markers fade after **2.5 seconds** while the full timeline and cumulative record history stay available. Selecting a hazard or entering animation reveals a matching recorded date. Optional **Skip quiet gaps** compresses empty time; **Next recorded start** jumps to the next reported day. Explicit map years and local filters stay in force.
 - Timelines retain dated records when country references are hidden. A visible **Show country references** action explains and restores map placement for hazards without coordinates. Incomplete dates remain available in Selected period and are never assigned an invented replay day.
-- Scrub the daily timeline, step by day, or jump to a year. Filled pins use source coordinates; optional hollow pins use approximate country reference points. Open **Disaster colors** for the key and counts.
+- Scrub the daily timeline, step by day, or jump to a year. Filled teal pins use source coordinates; optional hollow gray pins use approximate country reference points. Open **Location precision** for the distinction. Source coordinates are not independently verified here.
 - Use **Expand map** above the zoom controls to fill the viewport and move Compare Impacts below it; press Escape to restore the layout.
-- **Group overlaps** combines nearby source coordinates into numbered groups that refine with zoom. Country reference records group separately by country. Click a group to inspect its records and optionally zoom in.
+- **Group overlaps** is off by default. When enabled, nearby source coordinates form numbered groups that refine with zoom; country references group separately by country. Groups use a single outline without multi-color composition rings. Click to inspect their records; use the comparison bars or network/matrix for hazard profiles.
 - **Marker size** compares individual records by reported deaths, affected people, or adjusted damage on a fixed area scale. Ungroup to see all individual symbols; diamonds mark reported zero and crosses mark unreported values.
 - Open **Explore this selection** for a linked time brush, date inputs, local country selection, impact summaries, type composition, a searchable paginated record list, and persistent event details. **Select area** draws a rectangle using source coordinates; **Enter area bounds** provides keyboard inputs. These filters are local to Geographic Overview, and playback respects the selected interval.
 - Event details list other country records sharing the source event identifier and highlight currently visible matches, including access to records outside the current selection.
@@ -64,19 +65,20 @@ Outputs include cleaned CSV/JSON, a source checksum and quality report, aggregat
 - [Original project proposal](proposal.md)
 - [Project rubric](project-rubric.md)
 
-The dashboard now includes the original six analytical views plus the coordinated country–hazard network and matrix. See [country–hazard methods and interactions](docs/country-hazard-explorer.md), [implementation and verification](docs/enhancement-verification.md), and [monthly data methods](docs/data-methods.md).
+The dashboard includes country/event maps, rankings, a detail/overview timeline, seasonal bars, a streamgraph, a hierarchical treemap, the two-period comparison and the linked country–hazard network/matrix. See [comparison methods](docs/period-comparison.md), [country–hazard methods](docs/country-hazard-explorer.md), [implementation and verification](docs/enhancement-verification.md), and [monthly data methods](docs/data-methods.md).
 
 ## Verify
 
 ```powershell
 python -m unittest discover -s tests -p test_data.py
-node --test tests/data.test.js tests/hazards.test.js tests/map-analysis.test.js
+node --test tests/*.test.js
 ```
 
 For browser integration checks, leave the local server running, install Playwright if needed (`python -m pip install -r tests/requirements.txt`), then run:
 
 ```powershell
 python tests/event_map_check.py
+python tests/period_comparison_check.py
 python tests/map_controls_check.py
 python tests/map_exploration_check.py
 python tests/sparse_replay_check.py

@@ -36,15 +36,15 @@ with sync_playwright() as p:
     }''')
     assert distances['heatFire'] > 45
     assert min(distances['floods']) > 30
-    assert page.locator('.country').evaluate_all('(nodes) => new Set(nodes.map(n => n.getAttribute("fill"))).size') == 1
-    assert page.locator('.map-footer').is_hidden()
-    assert page.locator('.event-pin').first.is_visible()
-    page.locator('[name="map-encoding"][value="choropleth"]').check()
+    assert page.locator('[name="map-encoding"][value="choropleth"]').is_checked()
+    assert page.locator('#rank-type').get_attribute('aria-pressed') == 'true'
+    assert not page.locator('#map-clusters').is_checked()
     assert page.locator('.country').evaluate_all('(nodes) => new Set(nodes.map(n => n.getAttribute("fill"))).size') > 3
     assert page.locator('.map-footer').is_visible()
     assert page.locator('.event-layer').get_attribute('display') == 'none'
     page.locator('[name="map-encoding"][value="events"]').check()
     assert page.locator('.country').evaluate_all('(nodes) => new Set(nodes.map(n => n.getAttribute("fill"))).size') == 1
+    assert page.locator('.event-pin').first.is_visible()
 
     country_height = page.locator('#ranking-scroll').evaluate('(n) => n.clientHeight')
     page.click('#rank-type')

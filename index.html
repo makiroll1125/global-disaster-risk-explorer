@@ -44,31 +44,33 @@
       <section class="panel map-panel" id="geography" aria-labelledby="map-title">
         <div class="panel-heading"><div><p class="eyebrow">01 / GEOGRAPHIC OVERVIEW</p><h2 id="map-title">Where are disasters recorded?</h2></div><button id="clear-country" class="text-button" hidden>Clear map highlight ×</button></div>
         <p class="panel-subtitle" id="map-subtitle">Country totals · select a country to highlight it in this map</p>
-        <div class="map-encoding"><fieldset class="radio-segment"><legend class="sr-only">Map encoding</legend><label><input type="radio" name="map-encoding" value="events" checked><span>Disaster locations</span></label><label><input type="radio" name="map-encoding" value="choropleth"><span>Country impacts</span></label></fieldset><span id="map-encoding-note">Color identifies disaster type</span></div>
+        <div class="map-encoding"><fieldset class="radio-segment"><legend class="sr-only">Map encoding</legend><label><input type="radio" name="map-encoding" value="choropleth" checked><span>Country totals</span></label><label><input type="radio" name="map-encoding" value="events"><span>Event locations</span></label></fieldset><span id="map-encoding-note">Country shading shows the selected measure</span></div>
+        <p class="map-precision-note" id="map-precision-note">Country totals include records with and without coordinates. Select Event locations for source coordinates and optional country references.</p>
         <div class="map-stage">
-          <div class="map-analysis-tools"><label><input id="map-clusters" type="checkbox" checked> Group overlaps</label><label>Marker size <select id="map-size" aria-label="Map marker size"><option value="equal">Equal</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label><button id="map-area-tool" class="quiet-button" aria-pressed="false">Select area</button><button id="map-clear-spatial" class="text-button">Clear area / country</button></div>
+          <div class="map-analysis-tools"><label><input id="map-clusters" type="checkbox"> Group overlaps</label><label>Marker size <select id="map-size" aria-label="Map marker size"><option value="equal">Equal</option><option value="deaths">Reported deaths</option><option value="affected">Reported affected</option><option value="damage_adjusted_usd">Adjusted damage (2025 US$)</option></select></label><button id="map-area-tool" class="quiet-button" aria-pressed="false">Select area</button><button id="map-clear-spatial" class="text-button">Clear area / country</button></div>
           <div class="map-toolbar">
             <fieldset class="radio-segment" id="map-mode"><legend class="sr-only">Map view</legend>
               <label><input type="radio" name="map-mode" value="period" checked><span>Selected period</span></label>
-              <label><input type="radio" name="map-mode" value="timeline"><span>Animated timeline</span></label>
+              <label><input type="radio" name="map-mode" value="timeline"><span>Replay starts</span></label>
             </fieldset>
             <div class="year-controls map-years"><label>From<select id="map-start-year" aria-label="Map start year"></select></label><label>To<select id="map-end-year" aria-label="Map end year"></select></label></div>
           </div>
+          <p class="map-compare-link"><a href="#period-comparison">Compare two periods side by side ↓</a><span>Shared scale and zoom; no playback needed.</span></p>
           <div class="map-wrap"><svg id="map" viewBox="0 0 900 435" role="img" aria-label="World map with country impact totals and disaster start locations"></svg><div class="map-controls"><button id="map-expand" aria-label="Expand map" aria-expanded="false" aria-controls="geography comparison" title="Expand map · Escape to restore">⛶</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-reset" aria-label="Reset map zoom" title="Reset zoom">↺</button></div></div>
           <div id="event-replay" hidden>
             <div class="event-clock"><strong id="map-current-date"></strong><span>STARTS / SELECTED PERIOD</span></div>
-            <svg id="event-timeline" viewBox="0 0 900 70" preserveAspectRatio="none" role="img" aria-label="Disaster starts across the selected period, colored by type. Use the date slider below to select a date."></svg>
+            <svg id="event-timeline" viewBox="0 0 900 70" preserveAspectRatio="none" role="img" aria-label="Disaster start counts across the selected period. Use the date slider below to select a date."></svg>
             <input id="map-day" type="range" step="1" aria-label="Map playback date">
           </div>
           <div id="playback" hidden><div class="playback-buttons"><button id="map-prev" aria-label="Previous day">←</button><button id="map-play">Play</button><button id="map-next" aria-label="Next day">→</button></div><label class="playback-year-label" for="map-year">Year</label><input id="map-year" type="range" aria-label="Map playback year"><output id="map-current-year" aria-label="Current map year"></output><label>Speed <select id="map-speed" aria-label="Playback speed"><option value="24000">Slow · 24s/year</option><option value="12000" selected>Normal · 12s/year</option><option value="4000">Fast · 4s/year</option></select></label></div>
           <div id="map-replay-guidance" class="map-replay-guidance" hidden><div class="replay-options"><label><input id="map-skip-quiet" type="checkbox"> Skip quiet gaps (compress time)</label><button id="map-next-recorded" class="text-button">Next recorded start</button></div><p id="map-replay-status" role="status"></p><div class="replay-recovery"><button id="map-show-references" class="text-button" hidden>Show country references</button><button id="map-clear-replay-selection" class="text-button" hidden>Clear local map filters</button></div></div>
-          <div class="event-status"><span id="event-count"></span><label><input id="map-approximate" type="checkbox" checked> Include country reference points</label></div>
+          <div class="event-status"><span id="event-count"></span><label><input id="map-approximate" type="checkbox"> Show approximate country references (not event locations)</label></div>
           <p id="event-today" class="event-today"></p>
           <div id="map-size-legend" class="map-size-legend"></div>
         </div>
         <details id="map-exploration" class="map-exploration">
           <summary>Explore this selection <span id="map-selection-count"></span></summary>
-          <p class="selection-help">These controls affect only Geographic Overview. Drag a time interval below, select an area on the map, or choose a country. Area selection uses source coordinates only; a country selection can include reference-point records when that option is enabled.</p>
+          <p class="selection-help">These controls affect only Geographic Overview. Country totals include every matching record, regardless of coordinates. In Event locations, area selection uses source coordinates only and approximate references are an explicit opt-in.</p>
           <div class="map-selection-inputs"><label>Country<select id="map-local-country" aria-label="Map exploration country"><option value="">All countries</option></select></label><label>From date<input id="map-selection-start" type="date" aria-label="Map selection start date"></label><label>To date<input id="map-selection-end" type="date" aria-label="Map selection end date"></label><button id="map-apply-dates" class="quiet-button">Apply dates</button><button id="map-clear-dates" class="text-button">Full period</button></div>
           <details class="map-coordinate-inputs"><summary>Enter area bounds</summary><div><label>West<input id="map-west" type="number" step="any" min="-180" max="180" value="-180"></label><label>East<input id="map-east" type="number" step="any" min="-180" max="180" value="180"></label><label>South<input id="map-south" type="number" step="any" min="-90" max="90" value="-90"></label><label>North<input id="map-north" type="number" step="any" min="-90" max="90" value="90"></label><button id="map-apply-area" class="quiet-button">Apply bounds</button></div></details>
           <p id="map-selection-status" class="selection-status" role="status"></p>
@@ -79,13 +81,13 @@
           <section id="map-event-detail" class="map-event-detail" aria-labelledby="map-event-detail-title"><h3 id="map-event-detail-title">Inspect an event</h3><p>Select a marker, group, or record to keep its details here.</p></section>
         </details>
         <div class="map-footer"><div id="legend"></div><span class="map-hint">Scroll to zoom · drag to pan</span></div>
-        <details class="hazard-key"><summary>Disaster colors <span>Filled = source coordinate · hollow = country reference</span></summary><div id="hazard-legend"></div><p>Hurricane / typhoon includes all tropical cyclones. Sinkhole and firestorm have no explicitly classified records in this export; subsidence and wildfire retain their source classifications.</p></details>
+        <details class="hazard-key"><summary>Location precision <span>Filled teal = source coordinate · hollow gray = approximate reference</span></summary><p>Source coordinates are supplied by EM-DAT; they are not independently verified here. Approximate references identify a country only and are hidden by default. Overlap groups use a single outline and a record count.</p><p>Compare hazard composition in the <a href="#period-comparison">period comparison</a> or the <a href="#country-hazard">country–hazard network and matrix</a>.</p></details>
         <p class="footnote" id="event-coverage"></p>
         <p class="footnote" id="map-coverage"></p>
       </section>
       <section class="panel ranking-panel" id="comparison" aria-labelledby="rank-title">
         <div class="panel-heading"><div><p class="eyebrow">02 / COMPARE IMPACTS</p><h2 id="rank-title">The global picture</h2></div></div>
-        <div class="segmented" role="group" aria-label="Rank by"><button id="rank-country" aria-pressed="true">Countries</button><button id="rank-type" aria-pressed="false">Disaster types</button></div>
+        <div class="segmented" role="group" aria-label="Rank by"><button id="rank-type" aria-pressed="true">Disaster types</button><button id="rank-country" aria-pressed="false">Countries</button></div>
         <div id="ranking-range" class="year-controls local-range" data-chart="Ranking"></div>
         <div id="rank-selection" class="rank-selection" hidden><span id="rank-filter-count"></span><button id="rank-all" class="text-button">All</button><button id="rank-none" class="text-button">None</button></div>
       <p id="ranking-note" class="panel-subtitle"></p>
@@ -93,6 +95,27 @@
         <p class="footnote" id="ranking-instructions">Select a country bar to highlight it only here. Values show reported totals.</p>
       </section>
     </div>
+
+    <section class="panel period-panel" id="period-comparison" aria-labelledby="period-title">
+      <div class="panel-heading"><div><p class="eyebrow">COMPARE / TWO PERIODS</p><h2 id="period-title">What changed between two periods?</h2></div></div>
+      <p class="panel-subtitle">Both maps use the same country scale and synchronized zoom. Global hazard, geography and measure filters apply; these periods stay local to this comparison.</p>
+      <div class="period-controls">
+        <fieldset><legend>Period A</legend><label>From<select id="period-a-start" aria-label="Period A start year"></select></label><label>To<select id="period-a-end" aria-label="Period A end year"></select></label></fieldset>
+        <fieldset><legend>Period B</legend><label>From<select id="period-b-start" aria-label="Period B start year"></select></label><label>To<select id="period-b-end" aria-label="Period B end year"></select></label></fieldset>
+        <label>Compare<select id="period-basis"><option value="annual">Annual averages</option><option value="total">Period totals</option></select></label>
+        <button id="period-swap" class="quiet-button">Swap A / B</button><button id="period-zoom-reset" class="text-button">Reset both maps</button>
+      </div>
+      <p id="period-status" class="period-status" role="status"></p>
+      <div class="period-maps"><figure><figcaption id="period-a-label"></figcaption><svg id="period-map-a" viewBox="0 0 600 310" role="img" aria-label="Country totals for Period A"></svg></figure><figure><figcaption id="period-b-label"></figcaption><svg id="period-map-b" viewBox="0 0 600 310" role="img" aria-label="Country totals for Period B"></svg></figure></div>
+      <div class="period-map-tools"><span>Scroll to zoom · drag either map to pan both</span><button id="period-zoom-in" class="quiet-button" aria-label="Zoom in both comparison maps">+</button><button id="period-zoom-out" class="quiet-button" aria-label="Zoom out both comparison maps">−</button></div>
+      <div id="period-legend" class="period-legend" aria-label="Shared country scale"></div>
+      <p id="period-map-coverage" class="footnote"></p>
+      <div class="period-regions"><h3>Which region changed most?</h3><p id="period-region-note"></p><div class="table-scroll"><table><thead><tr><th>Region</th><th id="period-region-a">A</th><th id="period-region-b">B</th><th>B − A</th><th>Change</th></tr></thead><tbody id="period-region-body"></tbody></table></div></div>
+      <div class="period-detail-heading"><h3>Compare impacts and hazard composition</h3><label>Place<select id="period-country" aria-label="Period comparison country"><option value="">Worldwide / filtered geography</option></select></label><p>Select a country on either map or use this list. This selection affects only the comparison below and the outlines on both maps.</p></div>
+      <div class="period-details"><div><h4>Did frequency and impact move together?</h4><p id="period-impact-note"></p><div class="table-scroll"><table><thead><tr><th>Measure</th><th>A</th><th>B</th><th>B − A</th></tr></thead><tbody id="period-impact-body"></tbody></table></div></div><div><h4>Did the hazard mix change?</h4><p>Share of country-disaster records in each period. The six largest categories across both periods are shown; remaining categories form Other.</p><div class="period-pair-key"><span><i class="period-key-a"></i>Period A</span><span><i class="period-key-b"></i>Period B</span></div><div id="period-composition"></div></div></div>
+      <p class="footnote">Values are reported country-disaster records and impacts, not predicted risk or population-adjusted rates. Impact totals sum reported values only; reporting coverage may differ between periods. Annual averages divide by all selected calendar years. Country aggregation includes records without event coordinates.</p>
+      <p class="period-more"><a href="#country-hazard">Explore country–hazard relationships in the network and matrix ↓</a></p>
+    </section>
 
     <section class="panel timeline-panel" id="history" aria-labelledby="timeline-title">
       <div class="panel-heading"><div><p class="eyebrow">03 / FOLLOW THE TIMELINE</p><h2 id="timeline-title">How does number of disasters change over time?</h2></div>

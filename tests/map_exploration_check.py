@@ -53,6 +53,9 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto('http://127.0.0.1:8000')
     page.wait_for_selector('body[data-ready="true"]')
+    page.locator('[name="map-encoding"][value="events"]').check()
+    page.locator('#map-approximate').check()
+    page.locator('#map-clusters').check()
     assert selected(page) == len(ROWS)
     assert represented(page) == 10636
     assert page.locator('.event-cluster').count() > 20
