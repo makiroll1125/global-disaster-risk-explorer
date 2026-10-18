@@ -45,8 +45,8 @@ export class PeriodComparison {
     this.d3 = window.d3;
     const [first, last] = metadata.observed_years;
     const completeEnd = last === metadata.partial_year ? last - 1 : last;
-    const length = Math.max(1, Math.min(10, Math.floor((completeEnd - first + 1) / 2)));
-    this.a = { start: Math.max(first, completeEnd - 2 * length + 1), end: Math.max(first, completeEnd - length) };
+    const length = Math.max(1, Math.min(6, Math.floor((completeEnd - first + 1) / 2)));
+    this.a = { start: first, end: Math.min(completeEnd, first + length - 1) };
     this.b = { start: Math.max(first, completeEnd - length + 1), end: completeEnd };
     this.basis = 'annual'; this.country = ''; this.metric = 'records'; this.view = 'countries'; this.approximate = false; this.appearance = {}; this.projected = new WeakMap();
     this.isoByMap = new Map(rows.filter(row => row.map_id).map(row => [row.map_id, row.iso]));
@@ -199,6 +199,39 @@ export class PeriodComparison {
       : `No polygon: A ${counts[0]} · B ${counts[1]}. Records remain in tables.`;
     this.renderRegions();
     this.renderDetails();
+    this.renderOverview();
+  }
+
+  renderOverview() {
+    const host = this.$('period-overview');
+    host.replaceChildren();
+    const changes = [];
+    for (const metric of ['records', 'deaths', 'affected', 'damage_adjusted_usd']) {
+      const a = periodSummary(this.context, this.a, metric, this.basis);
+      const b = periodSummary(this.context, this.b, metric, this.basis);
+      const percent = a.value === null || b.value === null || a.value === 0 ? null : (b.value - a.value) / a.value;
+      const card = document.createElement('article'); card.className = 'period-overview-card'; card.dataset.metric = metric;
+      const title = document.createElement('h3'); title.textContent = metrics[metric].label;
+      const change = document.createElement('strong'); change.className = 'period-overview-change';
+      change.textContent = percent === null ? 'Not comparable' : this.d3.format('+.1%')(percent);
+      const format = value => value === null ? 'Not reported' : (metric.includes('usd') ? '$' : '') + this.d3.format('.3~s')(value).replace('G', 'B');
+      const max = Math.max(a.value || 0, b.value || 0) || 1;
+      const chart = this.d3.create('svg').attr('viewBox', '0 0 300 78').attr('role', 'img')
+        .attr('aria-label', `${metrics[metric].label}, ${this.basis === 'annual' ? 'annual averages' : 'period totals'}: A ${this.number(a.value, metric)}, B ${this.number(b.value, metric)}. Bars start at zero; scale is local to this measure.`);
+      for (const [index, summary] of [a, b].entries()) {
+        chart.append('text').attr('x', 0).attr('y', 19 + index * 36).text(index ? 'B' : 'A');
+        chart.append('rect').attr('x', 20).attr('y', 5 + index * 36).attr('height', 19)
+          .attr('width', Math.max(0, (summary.value || 0) / max * 160)).attr('fill', index ? '#086b70' : '#9ebbb6');
+        chart.append('text').attr('x', 190).attr('y', 19 + index * 36).text(format(summary.value));
+      }
+      const note = document.createElement('p');
+      note.textContent = metric === 'records' ? 'One record = one disaster’s impact in one country.'
+        : `Reporting coverage: A ${this.d3.format('.1%')(a.count ? a.reported / a.count : 0)} · B ${this.d3.format('.1%')(b.count ? b.reported / b.count : 0)}.`;
+      card.append(title, change, chart.node(), note); host.append(card);
+      if (metric !== 'records') changes.push(`${metrics[metric].label}: ${percent === null ? 'not comparable' : this.d3.format('+.1%')(percent)}`);
+    }
+    this.$('period-overview-scope').textContent = `All countries under the selected disaster-type filters · A ${this.label(this.a)} / B ${this.label(this.b)} · ${this.basis === 'annual' ? 'Annual averages' : 'Period totals'}. Each measure has its own zero-based bar scale.`;
+    this.$('period-finding').textContent = `${changes.join('; ')}. These are differences between the selected periods, not evidence of a continuous trend or its causes. Reporting completeness and individual extreme events affect the comparison.`;
   }
 
   drawEvents() {

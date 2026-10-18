@@ -85,7 +85,8 @@ with sync_playwright() as p:
     assert page.locator('.event-mark.is-hovered').count() == 0
     labels = page.locator('main > .panel > .panel-heading .eyebrow, .main-grid .panel-heading .eyebrow').all_text_contents()
     assert [label.split(')')[0] for label in labels] == ['1','2','3','4','5','6']
-    assert labels[2] == '3) COMPARE TWO PERIODS'
+    assert labels[0] == '1) COMPARE TWO PERIODS'
+    assert labels[2] == '3) COMPARE DISASTER TYPES'
     page.locator('#map-fade-events').uncheck()
 
     # Cumulative locations survive pauses, cursor changes and inspection by default.

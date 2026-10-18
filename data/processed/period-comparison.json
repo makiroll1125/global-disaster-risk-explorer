@@ -1,0 +1,137 @@
+{
+  "periods": {
+    "a": [
+      2000,
+      2005
+    ],
+    "b": [
+      2020,
+      2025
+    ]
+  },
+  "comparisons": {
+    "records": {
+      "a": {
+        "total": 2695,
+        "annual_average": 449.1666666666667,
+        "reported_records": 2695,
+        "records": 2695,
+        "coverage_pct": 100.0
+      },
+      "b": {
+        "total": 2608,
+        "annual_average": 434.6666666666667,
+        "reported_records": 2608,
+        "records": 2608,
+        "coverage_pct": 100.0
+      },
+      "change_pct": -3.2282003710575102
+    },
+    "deaths": {
+      "a": {
+        "total": 528809.0,
+        "annual_average": 88134.83333333333,
+        "reported_records": 1887,
+        "records": 2695,
+        "coverage_pct": 70.01855287569573
+      },
+      "b": {
+        "total": 376608.0,
+        "annual_average": 62768.0,
+        "reported_records": 1837,
+        "records": 2608,
+        "coverage_pct": 70.43711656441718
+      },
+      "change_pct": -28.78184751015962
+    },
+    "affected": {
+      "a": {
+        "total": 1520886306.0,
+        "annual_average": 253481051.0,
+        "reported_records": 2179,
+        "records": 2695,
+        "coverage_pct": 80.85343228200371
+      },
+      "b": {
+        "total": 809099349.0,
+        "annual_average": 134849891.5,
+        "reported_records": 2091,
+        "records": 2608,
+        "coverage_pct": 80.17638036809817
+      },
+      "change_pct": -46.80079991462557
+    },
+    "damage_adjusted_usd": {
+      "a": {
+        "total": 938768154000.0,
+        "annual_average": 156461359000.0,
+        "reported_records": 831,
+        "records": 2695,
+        "coverage_pct": 30.834879406307977
+      },
+      "b": {
+        "total": 1449205929000.0,
+        "annual_average": 241534321500.0,
+        "reported_records": 687,
+        "records": 2608,
+        "coverage_pct": 26.3420245398773
+      },
+      "change_pct": 54.37314557647426
+    }
+  },
+  "regional_records_per_year": [
+    {
+      "region": "Americas",
+      "a": 97.0,
+      "b": 109.16666666666667,
+      "difference": 12.166666666666671,
+      "change_pct": 12.542955326460481
+    },
+    {
+      "region": "Europe",
+      "a": 64.16666666666667,
+      "b": 64.33333333333333,
+      "difference": 0.1666666666666572,
+      "change_pct": 0.2597402597402487
+    },
+    {
+      "region": "Asia",
+      "a": 169.16666666666666,
+      "b": 166.83333333333334,
+      "difference": -2.3333333333333144,
+      "change_pct": -1.3793103448275779
+    },
+    {
+      "region": "Oceania",
+      "a": 17.833333333333332,
+      "b": 12.666666666666666,
+      "difference": -5.166666666666666,
+      "change_pct": -28.971962616822434
+    },
+    {
+      "region": "Africa",
+      "a": 101.0,
+      "b": 81.66666666666667,
+      "difference": -19.33333333333333,
+      "change_pct": -19.14191419141914
+    }
+  ],
+  "death_concentration": {
+    "a": {
+      "top_three_death_record_ids": [
+        "2004-0659-IDN",
+        "2005-0575-PAK",
+        "2004-0659-LKA"
+      ],
+      "top_three_share_pct": 51.89870066507945
+    },
+    "b": {
+      "top_three_death_record_ids": [
+        "2023-0054-TUR",
+        "2024-0369-ITA",
+        "2022-0465-ITA"
+      ],
+      "top_three_share_pct": 23.910272750446087
+    }
+  }
+}

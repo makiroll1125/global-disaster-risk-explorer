@@ -39,9 +39,23 @@ with sync_playwright() as p:
     page.locator('#map-approximate').uncheck()
     assert page.locator('#map').get_attribute('data-selected-records') == '1864'
 
+    # The opening comparison must match source sums, including coverage and units.
+    assert page.locator('main > section.panel').first.get_attribute('id') == 'period-comparison'
+    for metric in ['records', 'deaths', 'affected', 'damage_adjusted_usd']:
+        totals = []
+        for start, end in [(2000, 2005), (2020, 2025)]:
+            selected = [row for row in ROWS if start <= row['year'] <= end]
+            totals.append(len(selected) if metric == 'records' else sum(row[metric] for row in selected if row[metric] is not None))
+        expected = f'{100 * (totals[1] / totals[0] - 1):+.1f}%'
+        card = page.locator(f'#period-overview [data-metric="{metric}"]')
+        assert card.locator('strong').inner_text().replace(chr(0x2212), '-') == expected, (metric, card.inner_text(), expected)
+        assert 'annual averages' in card.locator('svg').get_attribute('aria-label')
+        assert card.locator('rect').count() == 2
+    overview_before_country = page.locator('#period-overview').inner_text()
+
     # Same color domain for both periods; verify against independent Python sums.
     ranges = {key: (int(page.input_value(f'#period-{key}-start')), int(page.input_value(f'#period-{key}-end'))) for key in ['a', 'b']}
-    assert ranges == {'a': (2006, 2015), 'b': (2016, 2025)}
+    assert ranges == {'a': (2000, 2005), 'b': (2020, 2025)}
     maxima = []
     for start, end in ranges.values():
         counts = {}
@@ -93,9 +107,10 @@ with sync_playwright() as p:
     assert page.input_value('#period-country') == 'JPN'
     # Countries without polygons still have complete record-based detail access.
     page.select_option('#period-country', 'GUM')
-    expected = sum(row['iso'] == 'GUM' and 2006 <= row['year'] <= 2015 for row in ROWS) / 10
+    expected = sum(row['iso'] == 'GUM' and 2000 <= row['year'] <= 2005 for row in ROWS) / 6
     assert page.locator('#period-impact-body tr[data-metric="records"] td').first.inner_text() == f'{expected:,.1f}'
     page.select_option('#period-country', 'JPN')
+    assert page.locator('#period-overview').inner_text() == overview_before_country
     for key in ['a', 'b']:
         assert page.locator(f'#period-map-{key} .period-country[data-iso="JPN"]').get_attribute('aria-pressed') == 'true'
     for metric in ['records', 'deaths', 'affected', 'damage_adjusted_usd']:
@@ -110,12 +125,12 @@ with sync_playwright() as p:
 
     # Annual average and total differ only by the selected calendar-year count.
     page.select_option('#period-basis', 'total')
-    expected = sum(row['iso'] == 'JPN' and 2006 <= row['year'] <= 2015 for row in ROWS)
+    expected = sum(row['iso'] == 'JPN' and 2000 <= row['year'] <= 2005 for row in ROWS)
     assert page.locator('#period-impact-body tr[data-metric="records"] td').first.inner_text() == f'{expected:,}'
     page.click('#period-swap')
-    assert page.input_value('#period-a-start') == '2016'
-    assert page.input_value('#period-b-start') == '2006'
-    assert '2016–2025' in page.locator('#period-impact-note').inner_text()
+    assert page.input_value('#period-a-start') == '2020'
+    assert page.input_value('#period-b-start') == '2000'
+    assert '2020–2025' in page.locator('#period-impact-note').inner_text()
 
     # No adjusted damage in partial 2026: hatch unknowns, never infer zero or a decline.
     page.select_option('#period-metric', 'damage_adjusted_usd')
@@ -132,6 +147,7 @@ with sync_playwright() as p:
 
     # Empty filters clear prior data and retain usable controls.
     assert 'No matching records' in page.locator('#period-status').inner_text()
+    assert page.locator('#period-overview strong').all_text_contents() == ['Not comparable'] * 4
     assert 'No records in either' in page.locator('#period-composition').inner_text()
     assert 'No regions match' in page.locator('#period-region-body').inner_text()
     page.click('#rank-all')

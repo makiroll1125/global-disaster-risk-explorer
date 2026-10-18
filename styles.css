@@ -141,6 +141,23 @@ html.map-is-expanded{scroll-padding-top:12px}.map-expanded #geography{min-height
 .period-legend>span{display:block;font-size:10px;color:var(--muted);line-height:1.6}.period-legend>svg{display:block;max-width:360px;width:100%}
 @media(max-width:720px){.event-options{width:100%;gap:7px 12px}.event-options label{font-size:10px}.map-footer{flex-wrap:wrap}#comparison .segmented button{font-size:10px}.period-reference-option{margin:0 16px 12px}.period-controls>label{flex:1;min-width:110px}}
 
+.story-nav{display:flex;flex-wrap:wrap;gap:10px 22px;padding:0 0 20px;font-size:12px;color:var(--teal)}
+.story-nav a{text-underline-offset:4px}
+.period-overview-heading,.period-map-heading{margin:24px 24px 12px}
+.period-overview-heading h3,.period-map-heading h3{margin:0 0 8px;font-size:17px}
+.period-overview-heading p,.period-map-heading p{font-size:12px;line-height:1.6;color:var(--muted);margin:0}
+.period-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 24px}
+.period-overview-card{border:1px solid var(--border);border-radius:6px;padding:16px;background:#f7faf8;min-width:0}
+.period-overview-card h3{font-size:11px;font-weight:650;margin:0 0 10px;text-transform:uppercase;letter-spacing:.5px}
+.period-overview-change{font-size:30px;letter-spacing:-1px;font-weight:650;color:var(--teal)}
+.period-overview-card svg{margin-top:16px;overflow:visible}
+.period-overview-card svg text{font-size:13px;fill:var(--ink);font-variant-numeric:tabular-nums}
+.period-overview-card p{font-size:11px;line-height:1.6;color:var(--muted);margin:8px 0 0}
+.period-finding{margin:16px 24px 24px;padding:14px 16px;border-left:3px solid var(--teal);background:#edf5f2;font-size:12px;line-height:1.7;color:var(--ink)}
+.archive-heading{font-size:12px;color:var(--muted);margin:26px 0 12px}
+#period-comparison{margin-bottom:24px}
+@media(max-width:900px){.period-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.period-overview{grid-template-columns:1fr;margin:0 16px}.period-overview-heading,.period-map-heading{margin-left:16px;margin-right:16px}.period-finding{margin-left:16px;margin-right:16px}.story-nav{gap:12px 18px}}
 /* Main-map focus follows the geometry, without rectangular SVG outlines. */
 #map:focus,#map:focus-visible,#map [tabindex]:focus,#map [tabindex]:focus-visible{outline:none!important}
 #map .event-mark,#map .event-pin{filter:none!important}

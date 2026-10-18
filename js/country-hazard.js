@@ -322,7 +322,7 @@ export class CountryHazardExplorer {
     const hazards = this.model.visibleHazards, d3 = this.d3, svg = d3.select('#ch-poster-svg'); svg.selectAll('*').remove();
     const W = 1500, H = 1050, networkX = 45, networkW = 430, matrixX = 535, matrixW = 920, top = 275, rowH = 52, cellW = Math.min(94, (matrixW - 230) / Math.max(1, hazards.length));
     svg.attr('viewBox', `0 0 ${W} ${H}`).attr('xmlns', 'http://www.w3.org/2000/svg'); svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#fff');
-    svg.append('text').attr('class', 'poster-kicker').attr('x', 45).attr('y', 48).text('07 / COUNTRY–HAZARD RELATIONSHIPS');
+    svg.append('text').attr('class', 'poster-kicker').attr('x', 45).attr('y', 48).text('06 / COUNTRY–HAZARD RELATIONSHIPS');
     svg.append('text').attr('class', 'poster-title').attr('x', 45).attr('y', 90).text('How do disaster profiles connect countries?');
     svg.append('text').attr('class', 'poster-subtitle').attr('x', 45).attr('y', 122).text(`EM-DAT country-disaster records · ${this.state.start}–${this.state.end} · ${countries.length} countries · ${hazards.length} displayed hazards`);
     svg.append('text').attr('class', 'poster-panel-title').attr('x', networkX).attr('y', 158).text('BIPARTITE NETWORK · TOP 3 CONNECTIONS PER COUNTRY');
