@@ -30,6 +30,9 @@ Open **http://127.0.0.1:8000**. Stop the server with Ctrl+C. A local HTTP server
 - Open **Explore this selection** for a linked time brush, date inputs, local country selection, impact summaries, type composition, a searchable paginated record list, and persistent event details. **Select area** draws a rectangle using source coordinates; **Enter area bounds** provides keyboard inputs. These filters are local to Geographic Overview, and playback respects the selected interval.
 - Event details list other country records sharing the source event identifier and highlight currently visible matches, including access to records outside the current selection.
 - Explore seasonal record averages, disaster-type composition, and a treemap with local World → Region → Country navigation, breadcrumbs and Back.
+- Compare country disaster profiles in the coordinated **Country–Hazard Relationships** section. The fixed two-column network shows the top two, top three, or all recorded relationships, while the matrix compares each hazard’s share of a country’s records or its absolute record count. Hover and selections are linked across both views; select up to two countries for a profile comparison.
+- Reorder matrix rows by frequency, name, or deterministic average-linkage clustering with cosine distance across all hazards in the filtered data. Search can substitute any available country into the displayed top-country subset.
+- Open **Poster view / Export figure** to create a control-free combined figure from the current data context and export it as SVG or a 3000 × 2100 PNG. Selections above 10 countries require accepting the legible 10-country poster preset.
 - Open [About the Data](about.html) for verified dataset statistics, real chart previews, interaction plans and the proposed usability study.
 - Inspect reporting coverage, individual records, and download the filtered CSV.
 
@@ -61,7 +64,7 @@ Outputs include cleaned CSV/JSON, a source checksum and quality report, aggregat
 - [Original project proposal](proposal.md)
 - [Project rubric](project-rubric.md)
 
-The dashboard now includes six linked views: choropleth, ranking, detail/overview timeline, seasonal bars, streamgraph and hierarchical treemap. See [implementation and verification](docs/enhancement-verification.md) and [monthly data methods](docs/data-methods.md).
+The dashboard now includes the original six analytical views plus the coordinated country–hazard network and matrix. See [country–hazard methods and interactions](docs/country-hazard-explorer.md), [implementation and verification](docs/enhancement-verification.md), and [monthly data methods](docs/data-methods.md).
 
 ## Verify
 
@@ -78,9 +81,10 @@ python tests/map_controls_check.py
 python tests/map_exploration_check.py
 python tests/sparse_replay_check.py
 python tests/playback_performance_check.py
+python tests/country_hazard_check.py
 ```
 
-These browser checks detect installed Chrome on macOS/Windows, or use Playwright Chromium on Linux. Set `CHROME_PATH` to override it. They verify source counts, replay and pulse behavior, map encodings, multi-hazard selection, ranking bounds, scroll preservation, keyboard/search interactions, expanded layouts and mobile controls. The older `browser_check.py` and `ux_check.py` scripts retain the interim interface contracts.
+These browser checks detect installed Chrome on macOS/Windows, or use Playwright Chromium on Linux. Set `CHROME_PATH` to override it. They verify source counts, replay and pulse behavior, map encodings, multi-hazard selection, ranking bounds, scroll preservation, keyboard/search interactions, coordinated network/matrix behavior, poster rendering, expanded layouts and mobile controls. The older `browser_check.py` and `ux_check.py` scripts retain the interim interface contracts.
 
 ## Sources
 
