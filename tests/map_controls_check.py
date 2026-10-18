@@ -36,18 +36,12 @@ with sync_playwright() as p:
     }''')
     assert distances['heatFire'] > 45
     assert min(distances['floods']) > 30
-    assert page.locator('[name="map-encoding"][value="choropleth"]').is_checked()
-    assert page.locator('#rank-type').get_attribute('aria-pressed') == 'true'
-    assert not page.locator('#map-clusters').is_checked()
-    assert page.locator('.country').evaluate_all('(nodes) => new Set(nodes.map(n => n.getAttribute("fill"))).size') > 3
-    assert page.locator('.map-footer').is_visible()
-    assert page.locator('.event-layer').get_attribute('display') == 'none'
-    page.locator('[name="map-encoding"][value="events"]').check()
-    assert page.locator('.country').evaluate_all('(nodes) => new Set(nodes.map(n => n.getAttribute("fill"))).size') == 1
+    assert page.locator('#rank-grouped').get_attribute('aria-pressed') == 'true'
     assert page.locator('.event-pin').first.is_visible()
+    assert page.locator('.country').evaluate_all('(nodes) => new Set(nodes.map(n => n.getAttribute("fill"))).size') == 1
 
     country_height = page.locator('#ranking-scroll').evaluate('(n) => n.clientHeight')
-    page.click('#rank-type')
+    page.click('#rank-expanded')
     assert page.locator('#ranking-scroll').evaluate('(n) => n.clientHeight') == country_height
     assert page.locator('#ranking-scroll').evaluate('(n) => n.scrollHeight > n.clientHeight * 2')
     eq = page.locator('.rank-row[aria-label^="Earthquake:"]')
@@ -142,7 +136,7 @@ with sync_playwright() as p:
     assert abs(scroll_position(page) - before) < 2
     page.click('#reset')
     page.locator('#geography').screenshot(path=str(ARTIFACTS / 'neutral-event-map.png'))
-    page.click('#rank-type')
+    page.click('#rank-expanded')
     page.locator('#comparison').screenshot(path=str(ARTIFACTS / 'scrollable-hazard-ranking.png'))
 
     # Popovers remain inside small viewports and work with the collapsed filter bar.
@@ -163,4 +157,4 @@ with sync_playwright() as p:
         page.keyboard.press('Escape')
     assert not errors, errors
     browser.close()
-    print('PASS: neutral/choropleth views, bounded ranking, union filtering, none/all, scroll preservation, keyboard/search, mobile overlays, no JS errors.')
+    print('PASS: event-map defaults, bounded ranking, union filtering, none/all, scroll preservation, keyboard/search, mobile overlays, no JS errors.')

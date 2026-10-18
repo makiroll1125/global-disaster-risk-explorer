@@ -14,28 +14,19 @@ Open **http://127.0.0.1:8000**. Stop the server with Ctrl+C. A local HTTP server
 
 ## Explore
 
-- Start with **Country totals**: a single teal shading scale aggregates every matching record by country, including records without event coordinates. Switch to **Event locations** for source coordinates; approximate hollow gray country references are hidden by default and explicitly labeled as non-event locations.
-- **Compare two periods** uses synchronized country maps with one shared square-root scale. Defaults compare 2006–2015 with 2016–2025, excluding partial 2026. Annual averages accommodate different period lengths; period totals are also available. Regional changes, country impact/coverage tables, and paired composition bars answer comparison questions without animation. See [comparison methods](docs/period-comparison.md).
-- Toggle each disaster type independently: from All, a click excludes only that type. Use None to build a smaller subset. Hover or focus a type for a short explanation; [hazard colors and terminology](docs/hazard-encoding.md) documents the palette and sources.
-- Switch between records, reported deaths, affected populations and adjusted damage.
-- Combine any of 34 hazard categories using the **Disaster types** checkbox menu, including tsunami, avalanche, hurricane/typhoon, tornado, heatwave, blizzard, hailstorm and duststorm. Search, All and None make larger selections manageable.
-- The ranking opens on **Disaster types** in a fixed-height scroll area. Country bars highlight locally; disaster bars select a combination of hazards across the map and linked views. The full type ranking stays available for comparison while filtering.
-- Drag the timeline brush handles or use year selectors to zoom the detail chart; switch between yearly and monthly resolution.
-- Set the map’s From/To years, select **Replay starts**, then **Play** to replay daily recorded starts. Event pins, optional pulses and the start-count histogram use one teal color. In Country totals mode, shading shows records accumulated through the current date on a fixed scale. Use the two-period comparison for analytical changes rather than remembering playback frames.
-- Playback advances one year in **4s (Fast)**, **12s (Normal)** or **24s (Slow)**. Animated markers fade after **2.5 seconds** while the full timeline and cumulative record history stay available. Selecting a hazard or entering animation reveals a matching recorded date. Optional **Skip quiet gaps** compresses empty time; **Next recorded start** jumps to the next reported day. Explicit map years and local filters stay in force.
-- Timelines retain dated records when country references are hidden. A visible **Show country references** action explains and restores map placement for hazards without coordinates. Incomplete dates remain available in Selected period and are never assigned an invented replay day.
-- Scrub the daily timeline, step by day, or jump to a year. Filled teal pins use source coordinates; optional hollow gray pins use approximate country reference points. Open **Location precision** for the distinction. Source coordinates are not independently verified here.
-- Use **Expand map** above the zoom controls to fill the viewport and move Compare Impacts below it; press Escape to restore the layout.
-- **Group overlaps** is off by default. When enabled, nearby source coordinates form numbered groups that refine with zoom; country references group separately by country. Groups use a single outline without multi-color composition rings. Click to inspect their records; use the comparison bars or network/matrix for hazard profiles.
-- **Marker size** compares individual records by reported deaths, affected people, or adjusted damage on a fixed area scale. Ungroup to see all individual symbols; diamonds mark reported zero and crosses mark unreported values.
-- Open **Explore this selection** for a linked time brush, date inputs, local country selection, impact summaries, type composition, a searchable paginated record list, and persistent event details. **Select area** draws a rectangle using source coordinates; **Enter area bounds** provides keyboard inputs. These filters are local to Geographic Overview, and playback respects the selected interval.
-- Event details list other country records sharing the source event identifier and highlight currently visible matches, including access to records outside the current selection.
-- Explore seasonal record averages, disaster-type composition, and a treemap with local World → Region → Country navigation, breadcrumbs and Back.
-- Compare country disaster profiles in the coordinated **Country–Hazard Relationships** section. The fixed two-column network shows the top two, top three, or all recorded relationships, while the matrix compares each hazard’s share of a country’s records or its absolute record count. Hover and selections are linked across both views; select up to two countries for a profile comparison.
-- Reorder matrix rows by frequency, name, or deterministic average-linkage clustering with cosine distance across all hazards in the filtered data. Search can substitute any available country into the displayed top-country subset.
-- Open **Poster view / Export figure** to create a control-free combined figure from the current data context and export it as SVG or a 3000 × 2100 PNG. Selections above 10 countries require accepting the legible 10-country poster preset.
-- Open [About the Data](about.html) for verified dataset statistics, real chart previews, interaction plans and the proposed usability study.
-- Inspect reporting coverage, individual records, and download the filtered CSV.
+- The main map shows **Event locations** using source coordinates. **Show approximate country references** is off by default; hollow references identify countries, not event locations.
+- **Color by disaster type** defaults off. **Fade event locations (animated timeline)** defaults on. Both sit beside the reference toggle; uncheck fading to retain animated locations for inspection.
+- The sidebar opens on **Disaster types (grouped)**: 12 mutually exclusive hazard families. **Disaster types (expanded)** retains all 34 categories. A group toggles all member types; a mixed checkbox indicates partial selection. Optional map colors follow the active tab.
+- Use **Animated timeline** to replay reported start dates. Playback speeds are 4, 12 or 24 seconds per year. Fading removes markers after 2.5 seconds when enabled; data remain in the timeline and record list.
+- Overlap grouping has been removed. Hovered points have a black circular boundary and move above other points. **Marker size** compares individual reported impacts; diamonds indicate zero and crosses indicate unreported values.
+- **Explore this selection** provides local country/area/date filters, record search, impact summaries and persistent source details. Area selection uses source coordinates only.
+- **Compare two periods** has local settings for event totals, reported deaths, affected populations and adjusted damage. **Country impacts** shares one shading scale; **Event totals (locations)** plots the two periods' records with source coordinates and optional references. Impact-sized event marks share a fixed size scale. Both maps share zoom and pan.
+- Comparison defaults are 2006-2015 versus 2016-2025. Annual averages and period totals are available, with reporting coverage and partial-year warnings. Regional changes and country impact/composition details remain available in either view.
+- The historical timeline and seasonal sections are temporarily commented out in `index.html`. Their JavaScript and markup remain available for restoration.
+- Explore the streamgraph and treemap, then compare detailed country profiles in the linked **Country-Hazard Relationships** network and matrix. Poster export remains available.
+- Global category filters apply across views. Local year controls retain their own scopes. Filtered CSV downloads use all years under the global category filters.
+
+See [current main-view behavior](docs/main-view.md), [comparison methods](docs/period-comparison.md) and [data methods](docs/data-methods.md).
 
 The default scope is **2000–2026, all natural hazards**. **2026 is partial.** Adjusted damage uses **2025 USD**. Unknown impacts remain null; recorded totals are not estimates of future risk.
 
@@ -77,6 +68,7 @@ node --test tests/*.test.js
 For browser integration checks, leave the local server running, install Playwright if needed (`python -m pip install -r tests/requirements.txt`), then run:
 
 ```powershell
+python tests/main_view_check.py
 python tests/event_map_check.py
 python tests/period_comparison_check.py
 python tests/map_controls_check.py

@@ -53,12 +53,10 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto('http://127.0.0.1:8000')
     page.wait_for_selector('body[data-ready="true"]')
-    page.locator('[name="map-encoding"][value="events"]').check()
     page.locator('#map-approximate').check()
-    page.locator('#map-clusters').check()
     assert selected(page) == len(ROWS)
     assert represented(page) == 10636
-    assert page.locator('.event-cluster').count() > 20
+    assert page.locator('.event-cluster').count() == 0
     assert page.locator('.event-cluster').evaluate_all('(nodes) => nodes.every(n => n.__data__.members.every(d => d.exact === n.__data__.exact))')
     assert page.locator('.event-cluster.approximate').evaluate_all('(nodes) => nodes.every(n => new Set(n.__data__.members.map(d => d.row.iso)).size === 1)')
     before_count = represented(page)
@@ -66,12 +64,13 @@ with sync_playwright() as p:
     assert represented(page) == before_count and selected(page) == len(ROWS)
     page.click('#zoom-reset')
     # A click without a drag must still target the marker, rather than its SVG.
-    page.locator('.event-cluster.located').first.click()
+    page.locator('.event-mark:has(.event-pin.located)').first.focus()
+    page.keyboard.press('Enter')
     assert page.locator('#map-exploration').get_attribute('open') is not None
-    assert 'Selected marker group' in page.locator('#map-list-context').inner_text()
+    assert 'Selected record' in page.locator('#map-list-context').inner_text()
     page.click('#map-reset-selection')
-    page.locator('.event-cluster.located').first.focus()
-    cluster_count = int(page.locator('.event-cluster.located').first.get_attribute('data-count'))
+    page.locator('.event-mark:has(.event-pin.located)').first.focus()
+    cluster_count = 1
     page.keyboard.press('Enter')
     assert page.locator('#map-exploration').get_attribute('open') is not None
     assert page.locator('#map-record-page').inner_text().startswith(f'{cluster_count:,} records')
@@ -85,7 +84,7 @@ with sync_playwright() as p:
     page.click('#map-record-next')
     assert '2 /' in page.locator('#map-record-page').inner_text()
     page.click('#map-reset-selection')
-    unrelated = {key: page.locator('#' + key).inner_html() for key in ['timeline', 'ranking', 'stats', 'seasonal', 'streamgraph']}
+    unrelated = {key: page.locator('#' + key).inner_html() for key in ['ranking', 'stats', 'streamgraph']}
 
     # Country/date selection intersects, including country references only when requested.
     page.select_option('#map-local-country', 'JPN')
@@ -113,7 +112,6 @@ with sync_playwright() as p:
     expected_radius = 18 * (19846 / max(r['deaths'] or 0 for r in ROWS)) ** .5
     assert abs(radius - expected_radius) < .01
     page.click('#map-clear-dates')
-    page.locator('#map-clusters').uncheck()
     pin = page.locator('.event-pin[data-id="2011-0082-JPN"]')
     assert abs(float(pin.get_attribute('r')) * pin.evaluate('(n) => n.getScreenCTM().a') - radius) < .01
     assert page.locator('.unknown-impact').count() > 0
@@ -125,7 +123,6 @@ with sync_playwright() as p:
     assert 'ordered date interval' in page.locator('#map-selection-status').inner_text()
     page.click('#map-reset-selection')
     page.select_option('#map-size', 'equal')
-    page.locator('#map-clusters').check()
 
     # Keyboard area bounds use real coordinates, never country reference positions.
     page.locator('.map-coordinate-inputs summary').click()

@@ -1,5 +1,5 @@
-import { hazardDescriptions, eventDay, hasCoordinates, DAY } from './hazards.js';
-import { clusterMapItems, impactRadius, recordDateLabel, locationLabel, alignReplayCursor, upperBound } from './map-analysis.js';
+import { hazardDescriptions, hazardFamily, eventColor, eventDay, hasCoordinates, DAY } from './hazards.js';
+import { impactRadius, recordDateLabel, locationLabel, alignReplayCursor, upperBound } from './map-analysis.js';
 import { MapExplorer } from './map-explorer.js';
 
 const d3 = window.d3;
@@ -13,7 +13,7 @@ export class EventMap {
     this.transform = d3.zoomIdentity;
     this.areaOutline = svg.append('path').attr('class', 'map-area-outline').attr('pointer-events', 'none');
     this.layer = svg.append('g').attr('class', 'event-layer');
-    this.pinLayer = this.layer.append('g'); this.clusterLayer = this.layer.append('g');
+    this.pinLayer = this.layer.append('g');
     this.pulses = svg.append('g').attr('class', 'pulse-layer').attr('pointer-events', 'none');
     this.items = [];
     this.projected = new WeakMap();
@@ -53,9 +53,8 @@ export class EventMap {
     this.replayItems = this.periodItems.filter(d => d.day !== null && d.day <= cutoff).sort((a, b) => a.day - b.day);
     this.drawTimeline(this.explorer.timelineItems().map(d => d.row));
     this.render();
-    const precise = rows.filter(hasCoordinates).length;
     const dated = rows.filter(r => eventDay(r) !== null && eventDay(r) <= cutoff).length;
-    document.getElementById('event-coverage').textContent = `${precise.toLocaleString()} / ${rows.length.toLocaleString()} records have source coordinates. Hollow markers use country reference points, not event locations. ${dated.toLocaleString()} have a complete start date on or before the export cutoff; other records remain in period totals but are excluded from daily replay. Pulses show recorded starts, not the physical spread of a hazard.`;
+    document.getElementById('event-coverage').textContent = `${dated.toLocaleString()} fully dated records · ${rows.length - dated} excluded from daily replay. Pulses mark recorded starts.`;
   }
 
   render(from = null) {
@@ -64,54 +63,55 @@ export class EventMap {
     const selected = replay ? this.replayItems.slice(0, upperBound(this.replayItems, state.date, d => d.day)) : this.periodItems;
     this.selected = selected;
     let fresh = [];
-    if (replay && state.encoding !== 'choropleth') {
+    if (replay) {
       if (this.renderDate === null || state.date < this.renderDate || (from === null && state.date !== this.renderDate)) this.clearTrail();
       const start = from ?? (state.date !== this.renderDate ? state.date - DAY : state.date);
       fresh = this.replayItems.slice(upperBound(this.replayItems, start, d => d.day), upperBound(this.replayItems, state.date, d => d.day)).filter(d => d.point);
       const born = performance.now();
-      for (const [id, item] of this.active) if (born - item.born >= MARKER_LIFETIME) this.active.delete(id);
-      for (const item of fresh) this.active.set(item.row.id, { ...item, born });
+      if (state.fadeEvents) {
+        for (const [id, item] of this.active) if (born - item.born >= MARKER_LIFETIME) this.active.delete(id);
+        for (const item of fresh) this.active.set(item.row.id, { ...item, born });
+      } else this.clearTrail();
     } else this.clearTrail();
     this.renderDate = state.date;
-    this.visible = state.encoding === 'choropleth' ? [] : replay ? [...this.active.values()] : selected.filter(d => d.point);
+    this.visible = replay && state.fadeEvents ? [...this.active.values()] : selected.filter(d => d.point);
     this.unit = 1 / (this.svg.node().getScreenCTM()?.a || 1);
     this.svg.attr('data-selected-records', selected.length);
     this.drawMarkers();
     this.renderAreaOutline();
     this.renderSizeLegend();
     this.explorer.update(selected);
-    if (from !== null && state.encoding !== 'choropleth' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (from !== null && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const unit = this.unit, pos = d => d.point.map(v => v * this.transform.k);
       const pulses = this.pulses.selectAll(null).data(fresh).enter().append('circle')
         .attr('class', 'event-pulse').attr('cx', d => pos(d)[0]).attr('cy', d => pos(d)[1])
-        .attr('fill', 'none').attr('stroke', '#167c75')
+        .attr('fill', 'none').attr('stroke', d => eventColor(d.row.type, state))
         .attr('stroke-width', unit * 2).attr('r', unit * 3).attr('opacity', .85);
       pulses.transition().duration(1000).ease(d3.easeCubicOut).attr('r', unit * 38).attr('opacity', 0).remove();
     }
     const dayRows = selected.filter(d => d.point && d.day === state.date);
-    document.getElementById('event-today').textContent = replay ? `${dateLabel(state.date)} · ${dayRows.length} mapped starts` : 'Select Animated timeline to replay recorded starts';
+    document.getElementById('event-today').textContent = replay ? `${dateLabel(state.date)} · ${dayRows.length} starts today` : '';
     if (this.explorer.focusIds) document.getElementById('event-today').textContent += ` · Selected group: ${this.explorer.focusIds.size} records; details in Explore this selection below`;
     this.updateCursor();
-    if (replay && state.encoding !== 'choropleth' && this.active.size && !this.trailFrame) this.trailFrame = requestAnimationFrame(now => this.animateTrail(now));
+    if (replay && state.fadeEvents && this.active.size && !this.trailFrame) this.trailFrame = requestAnimationFrame(now => this.animateTrail(now));
   }
 
   drawMarkers() {
     if (!this.visible) return;
     const unit = this.unit, k = this.transform.k;
-    const groups = clusterMapItems(this.visible, point => point.map(v => v * k), 44 * unit, this.explorer.grouping);
-    this.renderPins(groups.filter(g => g.members.length === 1), unit);
-    this.renderClusters(groups.filter(g => g.members.length > 1), unit);
-    this.fadeNodes = this.layer.selectAll('.event-mark,.event-cluster').nodes();
+    const records = this.visible.map(item => ({ key: item.row.id, members: [item], exact: item.exact, point: item.point.map(v => v * k) }));
+    this.renderPins(records, unit);
+    this.fadeNodes = this.layer.selectAll('.event-mark').nodes();
     this.svg.attr('data-rendered-records', this.visible.length);
     const replay = this.state.mode === 'timeline';
-    document.getElementById('event-count').textContent = `${this.visible.length.toLocaleString()} ${replay ? 'recent starts on the map' : 'records on the map'} · ${groups.filter(g => g.members.length > 1).length} groups${replay ? ` · ${this.selected.length.toLocaleString()} starts through this date` : ''}`;
+    document.getElementById('event-count').textContent = `${this.visible.length.toLocaleString()} ${replay && this.state.fadeEvents ? 'recent locations' : 'mapped records'}`;
     this.applyFade(performance.now());
   }
 
   applyFade(now) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     for (const node of this.fadeNodes || []) {
-      if (this.state.mode !== 'timeline' || reduced) { node.style.opacity = 1; continue; }
+      if (this.state.mode !== 'timeline' || !this.state.fadeEvents || reduced) { node.style.opacity = 1; continue; }
       const d = node.__data__;
       const born = d.born ?? d3.max(d.members, item => item.born);
       node.style.opacity = Math.max(0, Math.min(1, (MARKER_LIFETIME - (now - born)) / FADE_DURATION));
@@ -120,6 +120,7 @@ export class EventMap {
 
   animateTrail(now) {
     this.trailFrame = null;
+    if (!this.state.fadeEvents) return;
     let expired = false;
     // Playback already expires records in its batched render. Avoid a second join
     // in the same frame; this loop owns expiry only while paused or finished.
@@ -146,56 +147,50 @@ export class EventMap {
       .attr('transform', d => `translate(${d.group.point})`);
     const circles = groupsSVG.selectAll('circle.event-pin').data(d => unknown(d) || zero(d) ? [] : [d]).join('circle')
       .attr('class', d => `event-pin ${d.exact ? 'located' : 'approximate'}`)
-      .attr('r', radius).attr('fill', d => d.exact ? '#167c75' : '#fff')
-      .attr('stroke', d => d.exact ? '#167c75' : '#71817d').attr('stroke-width', unit * 1.4);
+      .attr('r', radius).attr('fill', d => d.exact ? eventColor(d.row.type, this.state) : '#fff')
+      .attr('stroke', d => this.state.colorByType || d.exact ? eventColor(d.row.type, this.state) : '#71817d').attr('stroke-width', unit * 1.4);
     const paths = groupsSVG.selectAll('path.event-pin').data(d => unknown(d) || zero(d) ? [d] : []).join('path')
       .attr('class', d => `event-pin ${d.exact ? 'located' : 'approximate'} ${unknown(d) ? 'unknown-impact' : 'zero-impact'}`)
       .attr('d', d => unknown(d) ? `M${-3 * unit},${-3 * unit}l${6 * unit},${6 * unit}m0,${-6 * unit}l${-6 * unit},${6 * unit}` : `M0,${-3 * unit}l${3 * unit},${3 * unit}l${-3 * unit},${3 * unit}l${-3 * unit},${-3 * unit}Z`)
-      .attr('fill', 'none').attr('stroke', d => d.exact ? '#167c75' : '#71817d').attr('stroke-width', unit * 1.5);
+      .attr('fill', 'none').attr('stroke', d => this.state.colorByType || d.exact ? eventColor(d.row.type, this.state) : '#71817d').attr('stroke-width', unit * 1.5);
     groupsSVG.selectAll('.event-hit').data(d => [d]).join('circle').attr('class', 'event-hit').attr('r', d => Math.max(7 * unit, radius(d))).attr('fill', 'transparent');
+    groupsSVG.selectAll('.event-hover-ring').data(d => [d]).join('circle').attr('class', 'event-hover-ring')
+      .attr('r', d => Math.max(4 * unit, radius(d)) + 1.5 * unit).attr('fill', 'none')
+      .attr('stroke', '#000').attr('stroke-width', 1.5 * unit).attr('pointer-events', 'none');
     const tip = (event, d) => this.showTip(event, `${d.row.type} · ${d.row.country}`,
       `${d.row.event_name || d.row.location || d.row.id} · ${recordDateLabel(d.row)}`,
       `${hazardDescriptions[d.row.type]} ${locationLabel(d.row)}. Click to inspect the source record.`);
     groupsSVG.attr('tabindex', 0).attr('role', 'button').attr('aria-label', d => `${d.row.type}, ${d.row.country}, ${recordDateLabel(d.row)}. Inspect source record.`)
-      .on('pointermove', tip).on('focus', tip).on('pointerleave', this.hideTip).on('blur', this.hideTip)
+      .on('pointerenter', (_, d) => { this.hoveredId = d.row.id; this.updateHoveredMark(); })
+      .on('pointermove', tip)
+      .on('focus', (event, d) => { this.focusedId = event.currentTarget.matches(':focus-visible') ? d.row.id : ''; this.updateHoveredMark(); tip(event, d); })
+      .on('pointerleave', (_, d) => { if (this.hoveredId === d.row.id) this.hoveredId = ''; this.updateHoveredMark(); this.hideTip(); })
+      .on('blur', () => { this.focusedId = ''; this.updateHoveredMark(); this.hideTip(); })
       .on('click', (_, d) => { this.hideTip(); this.explorer.inspectGroup(d.group); })
       .on('keydown', (event, d) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.explorer.inspectGroup(d.group); } });
     circles.attr('data-type', d => d.row.type).attr('data-id', d => d.row.id);
     paths.attr('data-type', d => d.row.type).attr('data-id', d => d.row.id);
+    this.updateHoveredMark();
   }
 
-  renderClusters(groups, unit) {
-    const { highlightEvent } = this.explorer;
-    const clusters = this.clusterLayer.selectAll('.event-cluster').data(groups.sort((a, b) => Number(a.exact) - Number(b.exact)), d => d.key).join('g').order()
-      .attr('class', d => `event-cluster ${d.exact ? 'located' : 'approximate'}`)
-      .classed('linked-event', d => !!highlightEvent && d.members.some(item => item.row.event_id === highlightEvent))
-      .classed('chosen-group', d => !!this.explorer.focusIds && d.members.some(item => this.explorer.focusIds.has(item.row.id)))
-      .attr('transform', d => `translate(${d.point})`).attr('data-count', d => d.members.length)
-      .attr('data-group', d => d.exact ? 'source-coordinates' : 'country-reference')
-      .attr('role', 'button').attr('tabindex', 0)
-      .attr('aria-label', d => `${d.members.length} ${d.exact ? 'source-located records grouped at this zoom' : 'approximate country records for ' + d.members[0].row.country}. Open record group.`)
-      .on('click', (_, d) => { this.hideTip(); this.explorer.inspectGroup(d); })
-      .on('keydown', (event, d) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.explorer.inspectGroup(d); } })
-      .on('pointermove focus', (event, d) => this.showTip(event, `${d.members.length} country-disaster records`, d.exact ? 'Source coordinates grouped at this zoom; zoom to separate or click to inspect.' : `${d.members[0].row.country} · country reference only; exact locations unknown.`, 'Labels count records. Inspect the group list for hazards and impacts. Group size is constant.'))
-      .on('pointerleave', this.hideTip);
-    clusters.each(function(d) {
-      const group = d3.select(this);
-      group.selectAll('circle').data([d]).join('circle').attr('r', 9 * unit).attr('fill', '#fff').attr('stroke', '#8d9f98').attr('stroke-width', unit).attr('stroke-dasharray', d.exact ? null : `${2 * unit},${2 * unit}`);
-      group.selectAll('path').remove();
-      group.selectAll('text').data([d]).join('text').attr('text-anchor', 'middle').attr('dy', '.35em').attr('font-size', (d.members.length > 99 ? 9 : 10) * unit).attr('font-weight', 700).attr('fill', '#173640').text(d.members.length);
-    });
+  updateHoveredMark() {
+    const id = this.hoveredId || this.focusedId;
+    const marks = this.pinLayer.selectAll('.event-mark');
+    marks.classed('is-hovered', d => d.row.id === id);
+    marks.select('.event-hover-ring').attr('display', d => d.row.id === id ? null : 'none');
+    marks.filter(d => d.row.id === id).raise();
   }
 
   renderSizeLegend() {
-    const { sizeMetric, maxima, grouping } = this.explorer;
-    const key = `${sizeMetric}:${grouping}:${this.state.mode}`;
+    const { sizeMetric, maxima } = this.explorer;
+    const key = `${sizeMetric}:${this.state.mode}:${this.state.fadeEvents}`;
     if (key === this.sizeLegendKey) return;
     this.sizeLegendKey = key;
     const container = document.getElementById('map-size-legend'); container.replaceChildren();
     const description = document.createElement('span');
-    description.textContent = sizeMetric === 'equal' ? 'Equal-sized records · filled = source coordinate · hollow = country reference' : 'Circle area = reported impact · ◇ = reported zero · × = unreported · filled / hollow circles = source / reference';
+    description.textContent = sizeMetric === 'equal' ? 'Filled = source coordinate · hollow = country reference' : 'Area = impact · ◇ zero · × unreported';
     container.append(description);
-    if (this.state.mode === 'timeline') { const note = document.createElement('span'); note.textContent = 'Markers fade after 2.5 seconds. The timeline and record list retain every matching start.'; container.append(note); }
+    if (this.state.mode === 'timeline') { const note = document.createElement('span'); note.textContent = this.state.fadeEvents ? 'Fade after 2.5s' : 'Locations stay visible'; container.append(note); }
     if (sizeMetric !== 'equal') {
       const max = maxima[sizeMetric];
       const svg = d3.select(container).append('svg').attr('viewBox', '0 0 300 54').attr('aria-label', 'Impact size legend; fixed scale across map selections');
@@ -205,7 +200,6 @@ export class EventMap {
       }
       const note = document.createElement('span'); note.textContent = 'Fixed scale uses the complete dataset; tiny positive values have a 1.5px minimum radius.'; container.append(note);
     }
-    if (grouping) { const note = document.createElement('span'); note.textContent = 'Groups have a constant size and a single outline; labels count records. Dashed groups are country references. Inspect their record lists for hazard composition.'; container.append(note); }
   }
 
   enableAreaSelection(enabled) {
@@ -248,16 +242,20 @@ export class EventMap {
     // The histogram, seek slider and replay schedule share the full selected interval.
     // The current year is a navigation shortcut, never an additional record filter.
     this.scale = d3.scaleUtc().domain([start, end + DAY]).range([15, width - 15]);
-    const bins = d3.groups(dated, eventDay);
-    const max = d3.max(bins, ([, records]) => records.length) || 1;
+    const bins = d3.groups(dated, eventDay, row => !this.state.colorByType ? 'records' : this.state.hazardLevel === 'grouped' ? hazardFamily(row.type) : row.type);
+    const max = d3.max(bins, ([, types]) => d3.sum(types, ([, records]) => records.length)) || 1;
     const barWidth = Math.max(1, Math.min(4, (width - 30) / ((end - start) / DAY + 1)));
-    for (const [day, records] of bins) {
+    for (const [day, types] of bins) {
+      let top = 49;
+      for (const [type, records] of types) {
         const height = records.length / max * 34;
-        svg.append('rect').datum({ day, records }).attr('x', this.scale(day)).attr('y', 49 - height)
-          .attr('width', barWidth).attr('height', Math.max(1, height))
-          .attr('fill', '#167c75').attr('class', 'event-tick')
+        svg.append('rect').datum({ day, records }).attr('x', this.scale(day)).attr('y', top - height)
+          .attr('width', barWidth).attr('height', height)
+          .attr('fill', eventColor(type, this.state)).attr('class', 'event-tick')
           .on('click', event => { event.stopPropagation(); this.onDate(day); })
           .append('title').text(`${dateLabel(day)} · ${records.length} records`);
+        top -= height;
+      }
     }
     svg.append('g').attr('class', 'axis').attr('transform', 'translate(0,50)')
       .call(d3.axisBottom(this.scale).ticks(width < 500 ? 4 : 7).tickSize(0))

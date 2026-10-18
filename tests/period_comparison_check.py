@@ -1,4 +1,4 @@
-"""Country-first overview and source-backed comparisons. Serve the project on :8000."""
+"""Event overview and source-backed comparisons. Serve the project on :8000."""
 from pathlib import Path
 import json
 import os
@@ -19,31 +19,25 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto('http://127.0.0.1:8000')
     page.wait_for_selector('body[data-ready="true"]')
-    assert page.locator('[name="map-encoding"][value="choropleth"]').is_checked()
-    assert not page.locator('#map-clusters').is_checked()
+    assert page.locator('[name="map-encoding"]').count() == 0
     assert not page.locator('#map-approximate').is_checked()
-    assert page.locator('#rank-type').get_attribute('aria-pressed') == 'true'
-    assert page.locator('#map').get_attribute('data-selected-records') == str(len(ROWS))
-    assert page.locator('.event-pin,.event-cluster').count() == 0
-    assert page.locator('.map-analysis-tools').is_hidden()
-    assert page.locator('#map-size-legend').is_hidden()
-    assert len(set(page.locator('#map .country').evaluate_all('(nodes) => nodes.map(n => n.getAttribute("fill"))'))) > 3
+    assert page.locator('#rank-grouped').get_attribute('aria-pressed') == 'true'
+    assert page.locator('#map').get_attribute('data-selected-records') == '1864'
+    assert page.locator('.map-analysis-tools').is_visible()
+    assert len(set(page.locator('#map .country').evaluate_all('(nodes) => nodes.map(n => n.getAttribute("fill"))'))) == 1
     page.locator('#geography').screenshot(path=str(ARTIFACTS / 'country-overview.png'))
 
     # The second mode defaults to source coordinates only. Country totals never
     # inherit that coordinate-completeness filter.
-    page.locator('[name="map-encoding"][value="events"]').check()
     assert page.locator('.event-pin.located').count() == 1864
     assert page.locator('.event-pin.approximate').count() == 0
     assert set(page.locator('.event-pin').evaluate_all('(nodes) => nodes.map(n => n.getAttribute("fill"))')) == {'#167c75'}
-    page.locator('#map-clusters').check()
-    assert page.locator('.event-cluster').count() > 0
+    assert page.locator('.event-cluster').count() == 0
     assert page.locator('.event-cluster path').count() == 0
     page.locator('#map-approximate').check()
-    assert page.locator('.event-cluster.approximate').count() > 0
+    assert page.locator('.event-pin.approximate').count() > 0
     page.locator('#map-approximate').uncheck()
-    page.locator('[name="map-encoding"][value="choropleth"]').check()
-    assert page.locator('#map').get_attribute('data-selected-records') == str(len(ROWS))
+    assert page.locator('#map').get_attribute('data-selected-records') == '1864'
 
     # Same color domain for both periods; verify against independent Python sums.
     ranges = {key: (int(page.input_value(f'#period-{key}-start')), int(page.input_value(f'#period-{key}-end'))) for key in ['a', 'b']}
@@ -57,6 +51,26 @@ with sync_playwright() as p:
         maxima.append(max(counts.values()) / (end - start + 1))
     for key in ['a', 'b']:
         assert float(page.locator(f'#period-map-{key}').get_attribute('data-scale-max')) == max(maxima)
+
+    # Native SVG focus outlines must stay hidden while a country is pressed,
+    # both before and after selection, on either comparison map.
+    for key in ['a', 'b']:
+        country = page.locator(f'#period-map-{key} .period-country[data-iso="IND"]')
+        country.scroll_into_view_if_needed()
+        point = country.evaluate('''el => {
+            const box = el.getBBox();
+            const point = new DOMPoint(box.x + box.width / 2, box.y + box.height / 2)
+                .matrixTransform(el.getScreenCTM());
+            return {x: point.x, y: point.y};
+        }''')
+        for _ in range(2):
+            page.mouse.move(point['x'], point['y'])
+            page.mouse.down()
+            assert country.evaluate('el => el === document.activeElement')
+            assert country.evaluate('el => getComputedStyle(el).outlineStyle') == 'none'
+            page.wait_for_timeout(150)
+            assert country.evaluate('el => getComputedStyle(el).outlineStyle') == 'none'
+            page.mouse.up()
     page.click('#period-zoom-in')
     transforms = [page.locator(f'#period-map-{key}>g').get_attribute('transform') for key in ['a', 'b']]
     assert transforms[0] == transforms[1] and '1.4' in transforms[0]
@@ -68,7 +82,10 @@ with sync_playwright() as p:
     page.mouse.up()
     assert page.locator('#period-map-a>g').get_attribute('transform') == page.locator('#period-map-b>g').get_attribute('transform')
     page.click('#period-zoom-reset')
+    page.keyboard.press('Tab')
     page.locator('#period-map-a .period-country[data-iso="IND"]').focus()
+    assert page.locator('#period-map-a .period-country[data-iso="IND"]').evaluate(
+        'el => getComputedStyle(el).strokeWidth') == '2.4px'
     page.keyboard.press('Enter')
     assert page.input_value('#period-country') == 'IND'
     page.locator('#period-map-b .period-country[data-iso="JPN"]').focus()
@@ -101,30 +118,23 @@ with sync_playwright() as p:
     assert '2016–2025' in page.locator('#period-impact-note').inner_text()
 
     # No adjusted damage in partial 2026: hatch unknowns, never infer zero or a decline.
-    page.click('#metric-menu-button')
-    page.locator('#metric-menu [data-value="damage_adjusted_usd"]').click()
+    page.select_option('#period-metric', 'damage_adjusted_usd')
     page.select_option('#period-b-start', '2026')
     assert page.input_value('#period-b-end') == '2026'
-    assert 'Caution: 2026 is partial' in page.locator('#period-status').inner_text()
+    assert '2026 is partial' in page.locator('#period-status').inner_text()
     fills = page.locator('#period-map-b .period-country').evaluate_all('(nodes) => nodes.map(n => n.getAttribute("fill"))')
     assert any(fill.startswith('url(') for fill in fills)
     assert 'Not reported' in page.locator('#period-impact-body tr[data-metric="damage_adjusted_usd"]').inner_text()
 
-    page.click('#type-menu-button')
-    page.locator('#type-menu').get_by_role('button', name='None', exact=True).click()
-    page.locator('#type-menu [data-value="Epidemic"] input').check()
-    page.keyboard.press('Escape')
+    page.click('#rank-none')
     assert 'No reported country values' in page.locator('#period-legend').inner_text()
     assert page.locator('#period-legend .legend-ramp').count() == 0
 
     # Empty filters clear prior data and retain usable controls.
-    page.click('#type-menu-button')
-    page.locator('#type-menu').get_by_role('button', name='None', exact=True).click()
-    page.keyboard.press('Escape')
-    assert 'No records match' in page.locator('#period-status').inner_text()
+    assert 'No matching records' in page.locator('#period-status').inner_text()
     assert 'No records in either' in page.locator('#period-composition').inner_text()
     assert 'No regions match' in page.locator('#period-region-body').inner_text()
-    page.click('#reset')
+    page.click('#rank-all')
     assert page.locator('#ch-network .ch-edge').count() > 0
     assert page.locator('#ch-matrix .ch-cell').count() > 0
     page.set_viewport_size({'width': 390, 'height': 844})
@@ -135,4 +145,4 @@ with sync_playwright() as p:
     page.locator('#period-comparison').screenshot(path=str(ARTIFACTS / 'period-comparison-mobile.png'))
     assert not errors, errors
     browser.close()
-    print('PASS: country-first defaults, coordinate precision, single-color markers/groups, shared map scale and zoom, source-backed period impacts, partial-year/unknown/empty states, network/matrix retained, mobile layout.')
+    print('PASS: event-only defaults, coordinate precision, single-color markers/groups, shared map scale and zoom, source-backed period impacts, partial-year/unknown/empty states, network/matrix retained, mobile layout.')

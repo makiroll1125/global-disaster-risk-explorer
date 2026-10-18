@@ -1,4 +1,6 @@
 import { filterRows, groupSummary, metrics, summarize } from './data.js';
+import { eventColor, hasCoordinates } from './hazards.js';
+import { impactRadius, recordDateLabel } from './map-analysis.js';
 
 // Both maps and the detail tables use these same null-preserving calculations.
 export function periodSummary(rows, range, metric, basis = 'annual') {
@@ -46,7 +48,7 @@ export class PeriodComparison {
     const length = Math.max(1, Math.min(10, Math.floor((completeEnd - first + 1) / 2)));
     this.a = { start: Math.max(first, completeEnd - 2 * length + 1), end: Math.max(first, completeEnd - length) };
     this.b = { start: Math.max(first, completeEnd - length + 1), end: completeEnd };
-    this.basis = 'annual'; this.country = '';
+    this.basis = 'annual'; this.country = ''; this.metric = 'records'; this.view = 'countries'; this.approximate = false; this.appearance = {}; this.projected = new WeakMap();
     this.isoByMap = new Map(rows.filter(row => row.map_id).map(row => [row.map_id, row.iso]));
     this.mapIds = new Set(features.map(feature => feature.id));
     for (const period of ['a', 'b']) for (const bound of ['start', 'end']) {
@@ -59,6 +61,9 @@ export class PeriodComparison {
         this.render();
       };
     }
+    this.$('period-metric').onchange = event => { this.metric = event.target.value; this.render(); };
+    this.$('period-view').onchange = event => { this.view = event.target.value; this.render(); };
+    this.$('period-approximate').onchange = event => { this.approximate = event.target.checked; this.render(); };
     this.$('period-basis').onchange = event => { this.basis = event.target.value; this.render(); };
     this.$('period-swap').onclick = () => { [this.a, this.b] = [this.b, this.a]; this.render(); };
     this.$('period-country').onchange = event => { this.country = event.target.value; this.render(); };
@@ -67,13 +72,13 @@ export class PeriodComparison {
 
   $(id) { return document.getElementById(id); }
   label(range) { return `${range.start}–${range.end}`; }
-  number(value, metric = this.filters.metric) {
+  number(value, metric = this.metric) {
     if (value === null) return 'Not reported';
     return (metric.includes('usd') ? '$' : '') + this.d3.format(this.basis === 'annual' ? ',.1f' : ',.0f')(value);
   }
   short(value) {
     if (value === null) return 'Not reported';
-    return (this.filters.metric.includes('usd') ? '$' : '') + this.d3.format('.3~s')(value).replace('G', 'B');
+    return (this.metric.includes('usd') ? '$' : '') + this.d3.format('.3~s')(value).replace('G', 'B');
   }
   signed(value, metric) { return value === null ? 'Not comparable' : `${value > 0 ? '+' : value < 0 ? '−' : ''}${this.number(Math.abs(value), metric)}`; }
   coverage(summary) { return `${summary.reported.toLocaleString()} / ${summary.count.toLocaleString()} records reporting`; }
@@ -82,6 +87,8 @@ export class PeriodComparison {
     const d3 = this.d3;
     this.transform = d3.zoomIdentity;
     const projection = d3.geoEqualEarth().fitExtent([[10, 12], [590, 294]], { type: 'FeatureCollection', features: this.features });
+    this.projection = projection;
+    this.centers = new Map(this.features.map(feature => [feature.id, d3.geoCentroid(feature)]));
     const path = d3.geoPath(projection);
     this.maps = ['a', 'b'].map(id => {
       const svg = d3.select(`#period-map-${id}`);
@@ -104,15 +111,18 @@ export class PeriodComparison {
             current ? `Period ${id.toUpperCase()}: ${this.number(current.value)} ${this.unit}` : 'No matching records',
             current ? `${this.coverage(current)}. B − A: ${this.signed(summary.delta)}. Select for impact and composition details.` : 'No records does not establish absence of disasters.');
         }).on('pointerleave blur', this.hideTip);
-      return { id, svg, layer, countries };
+      const events = layer.append('g').attr('class', 'period-events');
+      return { id, svg, layer, countries, events };
     });
     this.zoom = d3.zoom().scaleExtent([1, 6]).extent([[0, 0], [600, 310]]).translateExtent([[0, 0], [600, 310]])
       .on('zoom', event => {
+        const changedScale = this.transform.k !== event.transform.k;
         this.hideTip(); this.transform = event.transform;
         for (const map of this.maps) {
           map.svg.property('__zoom', event.transform);
           map.layer.attr('transform', event.transform);
         }
+        if (changedScale && this.view === 'events') this.drawEvents();
       });
     for (const map of this.maps) map.svg.call(this.zoom).on('dblclick.zoom', null);
     this.$('period-zoom-in').onclick = () => this.maps[0].svg.call(this.zoom.scaleBy, 1.4);
@@ -126,7 +136,15 @@ export class PeriodComparison {
     this.hideTip(); this.render();
   }
 
-  update(filters) {
+  setAppearance(appearance) {
+    this.appearance = { colorByType: appearance.colorByType, hazardLevel: appearance.hazardLevel };
+    if (this.context) this.render();
+  }
+
+  update(filters, appearance = {}) {
+    if (this.globalMetric !== filters.metric) this.metric = filters.metric;
+    this.globalMetric = filters.metric;
+    this.appearance = { colorByType: appearance.colorByType, hazardLevel: appearance.hazardLevel };
     this.filters = filters;
     this.context = filterRows(this.rows, filters, { ignoreYears: true });
     const names = [...new Map(this.context.map(row => [row.iso, row.country]))].sort((a, b) => a[1].localeCompare(b[1]));
@@ -139,7 +157,10 @@ export class PeriodComparison {
 
   render() {
     this.hideTip();
-    const d3 = this.d3, metric = this.filters.metric;
+    const d3 = this.d3, metric = this.metric;
+    this.$('period-metric').value = metric;
+    this.$('period-reference-option').hidden = this.view !== 'events';
+    this.periodRows = Object.fromEntries(['a', 'b'].map(id => [id, this.context.filter(row => row.year >= this[id].start && row.year <= this[id].end)]));
     this.unit = metrics[metric].unit + (this.basis === 'annual' ? ' / year' : '');
     for (const id of ['a', 'b']) {
       for (const bound of ['start', 'end']) this.$(`period-${id}-${bound}`).value = this[id][bound];
@@ -157,6 +178,7 @@ export class PeriodComparison {
         .attr('aria-label', `Period ${map.id.toUpperCase()}, ${this.label(this[map.id])}: ${this.unit}; shared country scale`);
       map.countries.attr('fill', feature => {
         const summary = this.countryChanges.get(this.isoByMap.get(feature.id))?.[map.id];
+        if (this.view === 'events') return '#e5ebe8';
         return !summary || !summary.count ? '#e7ecec' : summary.value === null ? `url(#period-unknown-${map.id})` : color(summary.value);
       }).classed('selected', feature => this.isoByMap.get(feature.id) === this.country)
         .attr('aria-pressed', feature => String(this.isoByMap.get(feature.id) === this.country))
@@ -167,12 +189,74 @@ export class PeriodComparison {
     }
     const partial = [this.a, this.b].some(range => range.start <= this.metadata.partial_year && range.end >= this.metadata.partial_year);
     const overlap = this.a.start <= this.b.end && this.b.start <= this.a.end;
-    this.$('period-status').textContent = `${metrics[metric].label} · ${this.basis === 'annual' ? 'Annual averages make different period lengths comparable; years with no matching records remain in the denominator.' : 'Period totals: longer periods can accumulate larger values.'}${partial ? ' Caution: 2026 is partial; averages including it are not complete-year rates.' : ' Both periods use complete calendar years.'}${overlap ? ' Periods overlap, so some records contribute to both.' : ''}${this.context.length ? '' : ' No records match the global filters.'}`;
-    this.renderLegend(color, max, observedMax);
+    this.$('period-status').textContent = `${metrics[metric].label} · ${this.view === 'events' ? 'Individual record locations; table values use ' : ''}${this.basis === 'annual' ? 'annual averages' : 'period totals'}${partial ? ' · 2026 is partial' : ''}${overlap ? ' · Overlapping periods' : ''}${this.context.length ? '' : ' · No matching records'}.`;
+    this.drawEvents();
+    if (this.view === 'events') this.renderEventLegend();
+    else this.renderLegend(color, max, observedMax);
     const counts = [this.a, this.b].map(range => this.context.filter(row => row.year >= range.start && row.year <= range.end && !this.mapIds.has(row.map_id)).length);
-    this.$('period-map-coverage').textContent = `Records without a map polygon: A ${counts[0].toLocaleString()} · B ${counts[1].toLocaleString()}. They remain in all regional totals and country details. Missing event coordinates never exclude a record from country totals. ${this.metadata.partial_year} is a partial year.`;
+    this.$('period-map-coverage').textContent = this.view === 'events'
+      ? ['a', 'b'].map(id => `${id.toUpperCase()}: ${this.periodRows[id].filter(hasCoordinates).length.toLocaleString()} source locations / ${this.periodRows[id].length.toLocaleString()} records`).join(' · ') + '. Hollow references identify countries only; all records remain in tables.'
+      : `No polygon: A ${counts[0]} · B ${counts[1]}. Records remain in tables.`;
     this.renderRegions();
     this.renderDetails();
+  }
+
+  drawEvents() {
+    if (!this.maps || !this.periodRows) return;
+    const d3 = this.d3, k = this.transform.k;
+    this.eventObservedMax = d3.max([...this.periodRows.a, ...this.periodRows.b], row => row[this.metric]);
+    this.eventMax = this.eventObservedMax || 1;
+    for (const map of this.maps) {
+      const items = this.view !== 'events' ? [] : this.periodRows[map.id].map(row => {
+        if (this.projected.has(row)) return this.projected.get(row);
+        const exact = hasCoordinates(row), coords = exact ? [row.longitude, row.latitude] : this.centers.get(row.map_id);
+        const item = { row, exact, point: coords ? this.projection(coords) : null };
+        this.projected.set(row, item); return item;
+      }).filter(item => item.point?.every(Number.isFinite) && (item.exact || this.approximate))
+        .sort((a, b) => (b.row[this.metric] || 0) - (a.row[this.metric] || 0));
+      map.svg.attr('data-event-count', items.length).attr('data-event-size-max', this.eventMax);
+      if (this.view === 'events') map.svg.attr('aria-label', `Period ${map.id.toUpperCase()}, ${this.label(this[map.id])}: ${items.length} record locations; area represents ${metrics[this.metric].label}`);
+      const marks = map.events.selectAll('.period-event').data(items, item => item.row.id).join('g')
+        .attr('class', item => `period-event ${item.exact ? 'located' : 'approximate'}`)
+        .attr('data-id', item => item.row.id).attr('data-type', item => item.row.type)
+        .attr('transform', item => `translate(${item.point})`).attr('tabindex', 0).attr('role', 'button');
+      const unknown = item => this.metric !== 'records' && !Number.isFinite(item.row[this.metric]);
+      const zero = item => this.metric !== 'records' && item.row[this.metric] === 0;
+      marks.selectAll('circle.period-symbol').data(item => unknown(item) || zero(item) ? [] : [item]).join('circle').attr('class', 'period-symbol')
+        .attr('r', item => (this.metric === 'records' ? 2.5 : impactRadius(item.row[this.metric], this.eventMax, 12)) / k)
+        .attr('fill', item => item.exact ? eventColor(item.row.type, this.appearance) : '#fff')
+        .attr('stroke', item => item.exact || this.appearance.colorByType ? eventColor(item.row.type, this.appearance) : '#71817d')
+        .attr('stroke-width', .8).attr('vector-effect', 'non-scaling-stroke');
+      marks.selectAll('path').data(item => unknown(item) || zero(item) ? [item] : []).join('path')
+        .attr('d', item => unknown(item) ? `M${-3/k},${-3/k}l${6/k},${6/k}m0,${-6/k}l${-6/k},${6/k}` : `M0,${-3/k}l${3/k},${3/k}l${-3/k},${3/k}l${-3/k},${-3/k}Z`)
+        .attr('fill', 'none').attr('stroke', item => eventColor(item.row.type, this.appearance)).attr('stroke-width', 1.2).attr('vector-effect', 'non-scaling-stroke');
+      marks.selectAll('circle.period-hit').data(item => [item]).join('circle').attr('class', 'period-hit')
+        .attr('r', item => Math.max(6, this.metric === 'records' ? 2.5 : impactRadius(item.row[this.metric], this.eventMax, 12)) / k).attr('fill', 'transparent');
+      const tip = (event, item) => this.showTip(event, `${item.row.type} · ${item.row.country}`,
+        `${recordDateLabel(item.row)} · ${this.metric === 'records' ? '1 country-disaster record' : this.number(item.row[this.metric]) + ' ' + metrics[this.metric].unit}`,
+        `${item.exact ? 'Source coordinate' : 'Approximate country reference'} · ${item.row.id}`);
+      marks.attr('aria-label', item => `${item.row.type}, ${item.row.country}, ${recordDateLabel(item.row)}. ${item.exact ? 'Source coordinate' : 'Country reference'}. Select country.`)
+        .on('pointermove focus', tip).on('pointerleave blur', this.hideTip)
+        .on('click', (_, item) => this.chooseCountry(item.row.iso))
+        .on('keydown', (event, item) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.chooseCountry(item.row.iso); } });
+    }
+  }
+
+  renderEventLegend() {
+    const host = this.$('period-legend'); host.replaceChildren();
+    const title = document.createElement('strong');
+    title.textContent = this.metric === 'records' ? 'One mark = one country-disaster record' : `Area = ${metrics[this.metric].label} · shared size scale · ◇ zero · × unreported`;
+    host.append(title);
+    if (this.metric !== 'records' && this.eventObservedMax > 0) {
+      const svg = this.d3.select(host).append('svg').attr('viewBox', '0 0 360 54').attr('aria-label', 'Shared event impact size scale');
+      for (const [index, fraction] of [.0625, .25, 1].entries()) {
+        svg.append('circle').attr('cx', 55 + index * 120).attr('cy', 17).attr('r', 12 * Math.sqrt(fraction)).attr('fill', 'none').attr('stroke', '#167c75');
+        svg.append('text').attr('x', 55 + index * 120).attr('y', 48).attr('text-anchor', 'middle').attr('font-size', 10).text(this.short(this.eventMax * fraction));
+      }
+    } else if (this.metric !== 'records') {
+      const empty = document.createElement('span'); empty.textContent = this.eventObservedMax === 0 ? 'Reported values are zero.' : 'No reported impacts in these periods.'; host.append(empty);
+    }
+    const note = document.createElement('span'); note.textContent = `Filled = source coordinate · hollow = country reference${this.appearance.colorByType ? ' · Colors: ' + this.appearance.hazardLevel : ''}`; host.append(note);
   }
 
   renderLegend(color, max, observedMax) {
@@ -193,16 +277,17 @@ export class PeriodComparison {
   }
 
   renderRegions() {
-    const changes = periodChanges(this.context, 'region', this.a, this.b, this.filters.metric, this.basis)
+    const changes = periodChanges(this.context, 'region', this.a, this.b, this.metric, this.basis)
       .sort((a, b) => (b.delta ?? -Infinity) - (a.delta ?? -Infinity) || a.key.localeCompare(b.key));
-    this.$('period-region-a').textContent = `A · ${this.label(this.a)}`;
-    this.$('period-region-b').textContent = `B · ${this.label(this.b)}`;
+    this.$('period-region-a').textContent = `A · ${this.label(this.a)} · ${this.unit}`;
+    this.$('period-region-b').textContent = `B · ${this.label(this.b)} · ${this.unit}`;
+    this.$('period-region-delta').textContent = `B − A · ${this.unit}`;
     const leader = changes.find(row => row.delta !== null && row.delta > 0);
-    this.$('period-region-note').textContent = `${leader ? `${leader.key} has the largest increase in the selected reported measure: ${this.signed(leader.delta)}.` : 'No positive comparable regional change in this selection.'} Sorted by B − A · ${this.unit}. Impact cells show reporting coverage; unknown totals are not compared as zero.`;
+    this.$('period-region-note').textContent = `${leader ? `${leader.key}: largest increase (${this.signed(leader.delta)}).` : 'No comparable increase.'} ${this.unit}.`;
     this.d3.select('#period-region-body').selectAll('tr').data(changes, row => row?.key).join('tr').each((row, i, nodes) => {
       const tr = nodes[i]; tr.replaceChildren();
       const name = document.createElement('th'); name.scope = 'row'; name.textContent = row.key; tr.append(name);
-      for (const id of ['a', 'b']) tr.append(this.valueCell(row[id], this.filters.metric));
+      for (const id of ['a', 'b']) tr.append(this.valueCell(row[id], this.metric));
       for (const text of [this.signed(row.delta), row.percent === null ? '—' : this.d3.format('+.1%')(row.percent)]) {
         const td = document.createElement('td'); td.textContent = text; tr.append(td);
       }
@@ -224,7 +309,7 @@ export class PeriodComparison {
   renderDetails() {
     const rows = this.country ? this.context.filter(row => row.iso === this.country) : this.context;
     const place = this.country ? this.countryNames.get(this.country) : this.filters.country ? this.countryNames.get(this.filters.country) : this.filters.region || 'Worldwide';
-    this.$('period-impact-note').textContent = `${place} · ${this.basis === 'annual' ? 'Annual averages' : 'Period totals'} · A ${this.label(this.a)} / B ${this.label(this.b)}. Impact coverage counts source records, not years.`;
+    this.$('period-impact-note').textContent = `${place} · ${this.basis === 'annual' ? 'Annual averages' : 'Period totals'} · A ${this.label(this.a)} / B ${this.label(this.b)} .`;
     const metricKeys = ['records', 'deaths', 'affected', 'damage_adjusted_usd'];
     const body = this.$('period-impact-body'); body.replaceChildren();
     for (const metric of metricKeys) {

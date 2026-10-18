@@ -40,12 +40,11 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     assert page.goto('http://127.0.0.1:8000').status == 200
     page.wait_for_selector('body[data-ready="true"]')
+    page.locator('#map-fade-events').check()
     assert page.locator('.stat-value').first.get_attribute('title') == '10,896'
     assert page.locator('#type option.generated:not([disabled])').count() == 34
     assert page.locator('#type option[value="Sinkhole"]').evaluate('(n) => n.disabled')
     assert page.locator('#type option[value="Firestorm"]').evaluate('(n) => n.disabled')
-    page.locator('[name="map-encoding"][value="events"]').check()
-    page.locator('#map-clusters').uncheck()
     assert page.locator('.event-pin.located').count() == 1864
     page.locator('#map-approximate').uncheck()
     assert page.locator('.event-pin.approximate').count() == 0
@@ -61,7 +60,7 @@ with sync_playwright() as p:
     assert page.locator('.event-pin').count() == 0
     # Daily playback emits the source-located March 11 tsunami, in the timeline color.
     page.wait_for_timeout(300)
-    other_views = page.locator('#timeline').inner_html()
+    other_views = page.locator('#streamgraph').inner_html()
     page.select_option('#map-speed', '4000')
     page.click('#map-play')
     page.wait_for_selector('.event-pulse')
@@ -74,7 +73,7 @@ with sync_playwright() as p:
     assert 25 <= radius <= 50, radius
     page.locator('#geography').screenshot(path=str(ARTIFACTS / 'event-map-pulse.png'))
     page.click('#map-play')
-    assert page.locator('#timeline').inner_html() == other_views
+    assert page.locator('#streamgraph').inner_html() == other_views
     page.wait_for_timeout(1100)
     assert page.locator('.event-pulse').count() == 0
     # Previous/next advance precisely one day; scrub backwards removes future pins.
@@ -114,7 +113,7 @@ with sync_playwright() as p:
     assert page.locator('#map-next').is_disabled()
     # No Japanese tsunami starts in the explicitly selected 2026 range.
     assert page.locator('#map-play').is_disabled()
-    assert 'No records match' in page.locator('#map-replay-status').inner_text()
+    assert 'No matching records' in page.locator('#map-replay-status').inner_text()
     choose(page, 'country', '')
     hazards(page, ['Avalanche'])
     assert page.locator('.stat-value').first.get_attribute('title') == '56'

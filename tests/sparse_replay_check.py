@@ -50,9 +50,8 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto('http://127.0.0.1:8000')
     page.wait_for_selector('body[data-ready="true"]')
-    page.locator('[name="map-encoding"][value="events"]').check()
+    page.locator('#map-fade-events').check()
     page.locator('#map-approximate').check()
-    page.locator('#map-clusters').check()
     page.locator('[name="map-mode"][value="timeline"]').check()
 
     # The animated timeline must expose every Tsunami row, not just the Peru start
@@ -102,15 +101,6 @@ with sync_playwright() as p:
     assert cursor(page) == max(date_value(row) for row in tsunami)
     page.evaluate('window.pulseObserver.disconnect()')
     page.locator('#geography').screenshot(path=str(ARTIFACTS / 'tsunami-complete-replay.png'))
-    # The optional choropleth's fixed scale must accommodate cumulative totals.
-    page.locator('[name="map-encoding"][value="choropleth"]').check()
-    country_max = str(max(Counter(row['iso'] for row in tsunami).values()))
-    assert page.locator('#legend .legend-labels span').last.inner_text() == country_max
-    page.locator('#map-day').fill(str(int(datetime(2001, 6, 23, tzinfo=timezone.utc).timestamp() / 86400)))
-    assert page.locator('#legend .legend-labels span').last.inner_text() == country_max
-    page.locator('[name="map-encoding"][value="events"]').check()
-    print('PASS: all 33 Tsunami source records across 17 dates appear in the full-range chart and pulses; fading markers retain the complete selected history.', flush=True)
-
     # Exercise actual checkbox controls for all 34 hazards, including all low-frequency rows.
     types = sorted(set(TYPE_BY_ID.values()), key=lambda name: sum(t == name for t in TYPE_BY_ID.values()))
     assert len(types) == 34
@@ -134,14 +124,14 @@ with sync_playwright() as p:
     assert mapped(page) == 0
     assert page.locator('.event-tick').count() == 1
     assert page.locator('#map-show-references').is_visible()
-    assert 'without source coordinates remain in the timeline' in page.locator('#map-replay-status').inner_text()
+    assert 'country references only' in page.locator('#map-replay-status').inner_text()
     page.locator('#map-exploration summary').first.click()
-    assert 'includes records hidden by location toggle' in page.locator('#selection-timeline').text_content()
+    assert 'includes hidden references' in page.locator('#selection-timeline').text_content()
     page.click('#map-show-references')
     assert mapped(page) == 1 and page.locator('#map-approximate').is_checked()
 
     # The ranking's last rows use the same cursor-alignment path.
-    page.click('#rank-type')
+    page.click('#rank-expanded')
     page.click('#rank-none')
     page.locator('.rank-row[aria-label^="Impact:"]').click()
     assert mapped(page) == 1 and cursor(page) == '2013-02-15'
@@ -156,7 +146,7 @@ with sync_playwright() as p:
     page.wait_for_selector('.event-pulse')
     page.wait_for_function('document.querySelector("#map-current-year").textContent === "2014"')
     assert cursor(page) == '2014-11-17' and mapped(page) == 2
-    assert 'Last jump skipped' in page.locator('#map-replay-status').inner_text()
+    assert 'Quiet gaps skipped' in page.locator('#map-replay-status').inner_text()
     page.wait_for_function('document.querySelector("#map-play").textContent === "Play"')
     page.click('#map-play')
     hazards(page, ['Derecho'])
@@ -193,12 +183,12 @@ with sync_playwright() as p:
     page.select_option('#map-end-year', '2020')
     assert page.input_value('#map-year') == '2020'
     assert page.locator('#map-play').is_disabled()
-    assert 'No records match' in page.locator('#map-replay-status').inner_text()
+    assert 'No matching records' in page.locator('#map-replay-status').inner_text()
     page.select_option('#map-start-year', '2000')
     page.select_option('#map-end-year', '2000')
     hazards(page, ['Infestation'])
     assert page.locator('#map-play').is_disabled()
-    assert 'no complete start date' in page.locator('#map-replay-status').inner_text()
+    assert 'lack complete dates' in page.locator('#map-replay-status').inner_text()
     page.locator('[name="map-mode"][value="period"]').check()
     assert mapped(page) == sum(TYPE_BY_ID[row['id']] == 'Infestation' and row['year'] == 2000 for row in ROWS)
 

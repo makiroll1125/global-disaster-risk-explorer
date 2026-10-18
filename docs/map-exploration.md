@@ -1,6 +1,6 @@
 # Coordinated map exploration
 
-Geographic Overview now combines zoom-aware grouping, local spatial/time selection, proportional event symbols, and persistent source-record inspection. The default Country totals choropleth includes records without coordinates. Event locations is secondary, with teal source-coordinate pins and optional hollow gray country references. The [two-period comparison](period-comparison.md) provides persistent maps, regional changes and country impact/composition details.
+Geographic Overview now combines zoom-aware grouping, local spatial/time selection, proportional event symbols, and persistent source-record inspection. The main map shows event locations. Color is opt-in and animated fading defaults on; the sidebar selects grouped or expanded colors. Approximate country references are optional. The [two-period comparison](period-comparison.md) provides persistent maps, regional changes and country impact/composition details.
 
 ## Explore a subset
 
@@ -12,7 +12,7 @@ Open **Explore this selection** below the map. The panel starts collapsed to kee
 - Brush an interval on the selection histogram, or use **From date / To date / Apply dates**. Endpoints are inclusive UTC days. Spatial and date filters intersect. Applying an exploration filter pauses playback and returns to Selected period so the complete selected subset is visible.
 - **Full period** removes the date refinement; **Clear area / country** removes only the spatial refinement. **Reset exploration** clears both, search, group focus, and event highlight. It retains global filters, map years, marker-size choice, grouping preference, and camera position.
 
-The histogram retains the full spatial context rather than rescaling its time domain to each brush. It uses monthly bins for spans longer than two years and daily bins for shorter spans. It includes all fully dated records in that spatial context on or before the export cutoff, including unplaceable country records. Its selected interval drives the summary, composition and list. Replay has its own daily cursor; its histogram and date slider span the entire selected map period or local date interval, and the year slider provides a navigation shortcut. During replay, records accumulate across years in the summaries/list through the cursor. Markers show a short trail of starts, disappearing after 2.5 real seconds; the histogram always retains every matching date, including future starts.
+The histogram retains the full spatial context rather than rescaling its time domain to each brush. It uses monthly bins for spans longer than two years and daily bins for shorter spans. It includes all fully dated records in that spatial context on or before the export cutoff, including unplaceable country records. Its selected interval drives the summary, composition and list. Replay has its own daily cursor; its histogram and date slider span the entire selected map period or local date interval, and the year slider provides a navigation shortcut. During replay, records accumulate across years in the summaries/list through the cursor. Markers fade after 2.5 real seconds by default; unchecking Fade event locations (animated timeline) retains them through the cursor; the histogram always retains every matching date, including future starts.
 
 ## Replay sparse hazard types
 
@@ -26,13 +26,13 @@ Both timelines retain fully dated records even when country-reference markers ar
 
 Source coordinates and approximate country references never enter the same geographic group. Area selections exclude approximate records even if their country reference point happens to lie in the rectangle. Country selection is the explicit alternative for including those records.
 
-The default scope contains 10,896 source rows, of which 10,636 can be placed using a coordinate or available country reference. The selection summary, composition and list retain unplaceable records. The status line explicitly distinguishes placeable and selected counts. In Event locations, disabling references limits the selection to source-located records. Country totals always includes records without event coordinates, regardless of that secondary-mode toggle.
+The default scope contains 10,896 source rows, of which 10,636 can be placed using a coordinate or available country reference. The selection summary, composition and list retain unplaceable records. The status line explicitly distinguishes placeable and selected counts. In Event locations, disabling references limits the selection to source-located records. The separate two-period country-impact maps retain records without event coordinates.
 
 Missing/invalid start days remain excluded from date refinements and replay. Full-period totals restore them. Source dates after the export cutoff remain in full-period totals, with an explicit status note, and are excluded from brushed dates and replay. The detail panel preserves year-only and month-only precision and flags post-export starts.
 
 ## Group overlapping marks
 
-**Group overlaps** is off by default and is available in Event locations. At the current zoom, source coordinates group into a screen-space grid with 44px cells; zooming changes this grouping while preserving membership totals. This is display aggregation, not a geographic-distance or statistical cluster analysis. Points at identical coordinates may remain grouped at maximum zoom.
+Overlap grouping has been removed from the main map; each event is an individual mark. The following notes describe the earlier implementation. At the current zoom, source coordinates group into a screen-space grid with 44px cells; zooming changes this grouping while preserving membership totals. This is display aggregation, not a geographic-distance or statistical cluster analysis. Points at identical coordinates may remain grouped at maximum zoom.
 
 Approximate records group by country, independently of the coordinate grid. Numbered badges have a constant radius; their counts refer to country-disaster records. A single outline replaces hazard-composition rings; composition is available in the record list, period comparison and country?hazard matrix. Approximate badges use a dashed inner border. Source clusters are drawn above approximate groups. Some marks can still overlap, especially across location-precision groups; the searchable list provides access to every selected record without targeting a small mark.
 

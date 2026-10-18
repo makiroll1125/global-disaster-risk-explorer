@@ -8,7 +8,8 @@ const widthOf = id => Math.max(320, $(id).clientWidth - 36);
 function empty(svg, width, message) { svg.append('text').attr('class', 'chart-empty').attr('x', width / 2).attr('y', 100).text(message); }
 
 export function renderExtraCharts(ctx) {
-  renderSeason(ctx); renderStream(ctx); renderTree(ctx);
+  if ($('seasonal')) renderSeason(ctx); // Seasonal markup is temporarily commented out.
+  renderStream(ctx); renderTree(ctx);
 }
 function renderSeason(ctx) {
   const { rows, state, seasonState, defaults, metadata, showTip, hideTip } = ctx;
@@ -66,7 +67,7 @@ function renderStream(ctx) {
     .on('pointerenter focus',(event,key)=>{emphasize(key);showTip(event,key,hazardDescriptions[key],'Select to highlight this type only in this chart.');})
     .on('pointerleave blur',()=>{emphasize(null);hideTip();});
   legend.each(function(key){const item=d3.select(this);item.selectAll('*').remove();item.append('i').style('background',typeColor(key));item.append('span').text(key);});
-  $('stream-note').textContent=`${streamState.start}–${streamState.end} outlined · Layer thickness represents annual country-disaster records, regardless of the impact measure. Vertical position is a flowing baseline, not an absolute total. Select a layer or legend item to highlight a type only here.`;
+  $('stream-note').textContent=`${streamState.start}–${streamState.end} outlined · Thickness = records; vertical position is not a total. Select to highlight.`;
   if(!context.length) empty(svg,width,'No records for the selected geography.');
 }
 function renderTree(ctx) {
@@ -142,6 +143,6 @@ function renderTree(ctx) {
   cells.attr('aria-label',d=>`${d.data.name}: ${d.value} records, ${treeState.start}–${treeState.end}${d.depth === 3 && treeState.country ? '. Highlight disaster type only in this treemap.' : '. Open in treemap.'}`);
   const legend=d3.select('#tree-legend').selectAll('.region-legend-item').data(regions).join('button').attr('class','region-legend-item').attr('aria-label', r => `Open ${r} in treemap`).on('click', (_, r) => navigate(r));
   legend.each(function(region){const item=d3.select(this);item.selectAll('*').remove();item.append('i').style('background',regionColor(region));item.append('span').text(region);});
-  $('tree-note').textContent = `${trail.map(d => d.label).join(' / ')} · Local range ${treeState.start}–${treeState.end} · ${selected.length.toLocaleString()} country-disaster records · ${typeLabel(state)}${state.country || state.region ? ` · Global geography: ${countryNames.get(state.country) || state.region}` : ''} · Local type highlight: ${treeState.type || 'none'}. Navigation stays within this chart.`;
+  $('tree-note').textContent = `${trail.map(d => d.label).join(' / ')} · ${treeState.start}–${treeState.end} · ${selected.length.toLocaleString()} records${treeState.type ? ' · Highlight: ' + treeState.type : ''}`;
   if(!selected.length)empty(svg,width,'No records match these filters.');
 }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { hazardType, hazardColors, hazardDescriptions, eventDay, hasCoordinates } from '../js/hazards.js';
+import { hazardType, hazardColors, hazardDescriptions, hazardFamilies, hazardFamily, hazardFamilyColors, eventColor, eventDay, hasCoordinates } from '../js/hazards.js';
 
 test('source subtypes expose distinct hazards without inventing sinkholes or firestorms', () => {
   assert.equal(hazardType({ type: 'Earthquake', subtype: 'Tsunami' }), 'Tsunami');
@@ -35,4 +35,30 @@ test('all real records retain totals and have a defined display color', () => {
   assert.equal(new Set(Object.values(hazardColors)).size, Object.keys(hazardColors).length);
   assert.deepEqual(Object.keys(hazardDescriptions).sort(), Object.keys(hazardColors).sort());
   assert.ok(Object.values(hazardDescriptions).every(text => text.length > 20 && text.length < 180));
+});
+
+test('hazard families partition expanded categories and preserve all real record totals', () => {
+  const members = Object.values(hazardFamilies).flat();
+  assert.equal(new Set(members).size, members.length);
+  assert.deepEqual([...members].sort(), Object.keys(hazardColors).sort());
+  assert.equal(hazardFamily('Riverine flood'), hazardFamily('Flood'));
+  assert.equal(hazardFamily('Tsunami'), hazardFamily('Earthquake'));
+  const { records } = JSON.parse(fs.readFileSync(new URL('../data/processed/disasters.json', import.meta.url)));
+  const groups = new Map();
+  for (const row of records) {
+    const family = hazardFamily(hazardType(row));
+    assert.ok(hazardFamilyColors[family]);
+    groups.set(family, (groups.get(family) || 0) + 1);
+  }
+  assert.equal(groups.size, 12);
+  assert.equal([...groups.values()].reduce((sum, value) => sum + value, 0), records.length);
+  assert.equal(groups.get('Flood'), 4299);
+  assert.equal(groups.get('Earthquake / tsunami'), 707);
+});
+
+test('event colors are opt-in and follow the selected taxonomy', () => {
+  assert.equal(eventColor('Riverine flood'), '#167c75');
+  assert.equal(eventColor('Riverine flood', { colorByType: true, hazardLevel: 'grouped' }), hazardFamilyColors.Flood);
+  assert.equal(eventColor('Flash flood', { colorByType: true, hazardLevel: 'grouped' }), hazardFamilyColors.Flood);
+  assert.equal(eventColor('Riverine flood', { colorByType: true, hazardLevel: 'expanded' }), hazardColors['Riverine flood']);
 });
