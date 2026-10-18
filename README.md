@@ -24,6 +24,9 @@ Open **http://127.0.0.1:8000**. Stop the server with Ctrl+C. A local HTTP server
 - Comparison defaults are 2006-2015 versus 2016-2025. Annual averages and period totals are available, with reporting coverage and partial-year warnings. Regional changes and country impact/composition details remain available in either view.
 - The historical timeline and seasonal sections are temporarily commented out in `index.html`. Their JavaScript and markup remain available for restoration.
 - Explore the streamgraph and treemap, then compare detailed country profiles in the linked **Country-Hazard Relationships** network and matrix. Poster export remains available.
+- The Country–Hazard explorer has independent searchable multi-selects for countries and disaster types, with a reproducible contrast default plus optional top-frequency and all-item presets.
+- The network shows every positive-count relationship by default. Top 2 and Top 3 edge filters are explicit choices; the matrix always shows exact disaster-record counts for the complete selected country/type set.
+- Network and matrix hover/selection states are coordinated. Select up to two countries for comparison, or export the combined poster as SVG or high-resolution PNG.
 - Global category filters apply across views. Local year controls retain their own scopes. Filtered CSV downloads use all years under the global category filters.
 
 See [current main-view behavior](docs/main-view.md), [comparison methods](docs/period-comparison.md) and [data methods](docs/data-methods.md).
