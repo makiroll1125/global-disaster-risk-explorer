@@ -69,6 +69,29 @@ export function hazardType(row) {
   return subtypes[row.subtype] || row.source_type || row.type;
 }
 
+// Each expanded category belongs to exactly one family. This partition keeps
+// grouped selection, expanded selection and marker colors in agreement.
+export const hazardFamilies = {
+  'Flood': ['Flood', 'Riverine flood', 'Flash flood', 'Coastal flood', 'Glacial lake outburst flood'],
+  'Storm': ['Storm', 'Hurricane / typhoon', 'Tornado', 'Blizzard / winter storm', 'Hailstorm', 'Duststorm', 'Thunderstorm / lightning', 'Extratropical storm', 'Storm surge', 'Derecho', 'Severe weather'],
+  'Earthquake / tsunami': ['Earthquake', 'Tsunami'],
+  'Extreme temperature': ['Heatwave', 'Cold wave', 'Severe winter conditions'],
+  'Landslide / avalanche': ['Avalanche', 'Landslide (wet)', 'Landslide (dry)', 'Mudslide', 'Rockfall', 'Subsidence', 'Sinkhole'],
+  'Drought': ['Drought'], 'Wildfire': ['Wildfire', 'Firestorm'],
+  'Volcanic activity': ['Volcanic activity'], 'Epidemic': ['Epidemic'],
+  'Infestation': ['Infestation'], 'Impact': ['Impact'], 'Animal incident': ['Animal incident'],
+};
+export const hazardFamilyColors = {
+  'Flood': '#247f9a', 'Storm': '#7353a6', 'Earthquake / tsunami': '#c97924',
+  'Extreme temperature': '#c34f47', 'Landslide / avalanche': '#826346',
+  'Drought': '#a58b25', 'Wildfire': '#9f173e', 'Volcanic activity': '#bf6155',
+  'Epidemic': '#97509b', 'Infestation': '#6e8b2d', 'Impact': '#3c354d', 'Animal incident': '#366d57',
+};
+const familyByType = new Map(Object.entries(hazardFamilies).flatMap(([family, types]) => types.map(type => [type, family])));
+export const hazardFamily = type => familyByType.get(type) || type;
+export const eventColor = (type, { colorByType = false, hazardLevel = 'grouped' } = {}) =>
+  colorByType ? (hazardLevel === 'grouped' ? hazardFamilyColors[hazardFamily(type)] : hazardColors[type]) || '#777a99' : '#167c75';
+
 export const DAY = 86400000;
 
 // Missing and invalid days are excluded from daily replay, rather than assigned a date.

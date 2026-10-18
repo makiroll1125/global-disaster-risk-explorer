@@ -17,7 +17,9 @@ with sync_playwright() as playwright:
     assert page.locator('#ch-network .ch-country-node').count() == 10
     assert page.locator('#ch-network .ch-hazard-node').count() == 8
     assert page.locator('#ch-matrix .ch-cell').count() == 80
-    assert page.locator('#ch-network .ch-edge:not(.ch-edge-hidden)').count() == 30
+    # Four of the top-three relationships lie outside the displayed top-eight
+    # hazards: the USA's Tornado/Wildfire/Blizzard and Japan's Heatwave.
+    assert page.locator('#ch-network .ch-edge:not(.ch-edge-hidden)').count() == 26
     assert 'Showing 10 of 220' in page.locator('#ch-subset-note').inner_text()
     assert 'all 34 hazard types' in page.locator('#ch-denominator-note').inner_text()
 
@@ -40,14 +42,14 @@ with sync_playwright() as playwright:
     assert 'profile similarity' in page.locator('#ch-details').inner_text()
 
     page.locator('[name="ch-metric"][value="count"]').check()
-    assert page.locator('#ch-matrix .ch-matrix-legend').inner_text().find('Record count') >= 0
+    assert 'Record count' in page.locator('#ch-matrix .ch-matrix-legend').text_content()
     page.select_option('#ch-order', 'similarity')
     assert 'average-linkage hierarchical clustering' in page.locator('#country-hazard .footnote').inner_text()
 
     page.click('#ch-poster-open')
     assert page.locator('#ch-poster-dialog').is_visible()
     assert page.locator('#ch-poster-svg').get_attribute('viewBox') == '0 0 1500 1050'
-    assert 'Both views use the same underlying disaster records.' in page.locator('#ch-poster-svg').inner_text()
+    assert 'Both views use the same underlying disaster records.' in page.locator('#ch-poster-svg').text_content()
     page.click('#ch-poster-close')
 
     # Narrow layouts stack the two views and do not widen the document.
